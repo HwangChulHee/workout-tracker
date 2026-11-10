@@ -57,9 +57,9 @@ Files are created lazily on first save. The private repository may be empty duri
     {
       "id": "measurement-uuid",
       "date": "2026-11-10",
-      "weightKg": 66.5,
-      "skeletalMuscleKg": 32.6,
-      "bodyFatKg": 8.4,
+      "weightKg": 74.2,
+      "skeletalMuscleKg": 30.1,
+      "bodyFatKg": 16.8,
       "bodyFatPercent": null,
       "heightCm": null,
       "notes": null,
