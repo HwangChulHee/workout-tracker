@@ -19,7 +19,8 @@ export function useTimer() {
     if (!clock.endAt) return
     const tick = () => {
       const time = Date.now()
-      setNow(time)
+      const seconds = remainingSeconds(clock.endAt, time)
+      setNow((previous) => remainingSeconds(clock.endAt, previous) === seconds ? previous : time)
       if (time >= clock.endAt) {
         setClock({ endAt: 0, pausedMs: 0, duration: clock.duration })
         navigator.vibrate?.(300)

@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { Check, Copy, Dumbbell, Plus, Trash2 } from 'lucide-react'
-import { isDate, newSet, sessionVolume, type CatalogEntry, type Exercise, type Session, type SetEntry } from './model'
+import { isDate, sessionVolume, type CatalogEntry, type Exercise, type Session } from './model'
 import type { WorkoutRepository } from './repository'
 
 export type Run = (action: () => Promise<unknown>, success?: string) => Promise<boolean>
@@ -22,22 +22,16 @@ function NumberInput({ label, value, max, step = 1, onSave }: {
     onBlur={() => setDraft(null)} />
 }
 
-function ExerciseCard({ exercise, update, changeRest, remove, complete }: {
+function ExerciseCard({ date, exercise, repo, run, complete }: {
+  date: string
   exercise: Exercise
-  update: (change: (entry: Exercise) => void) => Promise<boolean>
-  changeRest: (seconds: number) => void
-  remove: () => void
+  repo: WorkoutRepository
+  run: Run
   complete: (seconds: number) => void
 }) {
   const [draft, setDraft] = useState<string | null>(null)
   const [rest, setRest] = useState<string | null>(null)
-
-  function patchSet(id: string, values: Partial<SetEntry>) {
-    return update((entry) => {
-      const set = entry.sets.find((set) => set.id === id)
-      if (set) Object.assign(set, values)
-    })
-  }
+  const { id } = exercise
 
   return <article className="panel exercise">
     <div className="exercise-heading">
@@ -45,9 +39,11 @@ function ExerciseCard({ exercise, update, changeRest, remove, complete }: {
         onChange={(e) => {
           setDraft(e.target.value)
           const name = e.target.value.trim()
-          if (name) void update((entry) => { entry.name = name })
+          if (name) void run(() => repo.renameExercise(date, id, name))
         }} onBlur={() => setDraft(null)} />
-      <button className="icon danger" aria-label={exercise.name + ' 삭제'} onClick={remove}><Trash2 size={18} /></button>
+      <button className="icon danger" aria-label={exercise.name + ' 삭제'} onClick={() => {
+        if (window.confirm(exercise.name + ' 기록을 삭제할까요?')) void run(() => repo.removeExercise(date, id))
+      }}><Trash2 size={18} /></button>
     </div>
     <label className="rest-setting">기본 휴식
       <input type="number" min={1} max={3600} aria-label="기본 휴식(초)"
@@ -56,7 +52,7 @@ function ExerciseCard({ exercise, update, changeRest, remove, complete }: {
           setRest(e.target.value)
           if (e.target.value && e.target.validity.valid) {
             const seconds = e.target.valueAsNumber
-            changeRest(seconds)
+            void run(() => repo.updateRestDefault(date, id, seconds))
           }
         }} onBlur={() => setRest(null)} /> 초
     </label>
@@ -64,17 +60,18 @@ function ExerciseCard({ exercise, update, changeRest, remove, complete }: {
     {exercise.sets.map((set, index) => <div className="set-row" key={set.id}>
       <span className="set-index">{index + 1}</span>
       <NumberInput label={`세트 ${index + 1} 중량`} value={set.weightKg} max={2000} step={0.01}
-        onSave={(weightKg) => void patchSet(set.id, { weightKg })} />
+        onSave={(weightKg) => void run(() => repo.updateSetValue(date, id, set.id, 'weightKg', weightKg))} />
       <NumberInput label={`세트 ${index + 1} 횟수`} value={set.reps} max={1000}
-        onSave={(reps) => void patchSet(set.id, { reps })} />
+        onSave={(reps) => void run(() => repo.updateSetValue(date, id, set.id, 'reps', reps))} />
       <button className="icon check" aria-label={`세트 ${index + 1} 완료`} aria-pressed={set.completed}
-        onClick={async () => {
-          if (await patchSet(set.id, { completed: !set.completed }) && !set.completed) complete(exercise.restSeconds)
-        }}><Check size={20} /></button>
+        onClick={() => void run(async () => {
+          const seconds = await repo.toggleSetCompletion(date, id, set.id)
+          if (seconds !== undefined) complete(seconds)
+        })}><Check size={20} /></button>
       <button className="icon danger" aria-label={`세트 ${index + 1} 삭제`}
-        onClick={() => void update((entry) => { entry.sets = entry.sets.filter((row) => row.id !== set.id) })}><Trash2 size={16} /></button>
+        onClick={() => void run(() => repo.removeSet(date, id, set.id))}><Trash2 size={16} /></button>
     </div>)}
-    <button className="secondary w-full mt-3" onClick={() => void update((entry) => { entry.sets.push(newSet(entry.sets.at(-1))) })}>
+    <button className="secondary w-full mt-3" onClick={() => void run(() => repo.addSet(date, id))}>
       <Plus size={18} /> 세트 추가
     </button>
   </article>
@@ -107,24 +104,17 @@ export function Workout({ date, setDate, sessions, catalog, repo, run, onComplet
         }
       }}><Copy size={16} /> 이전 운동 불러오기</button>}
     </div>
-    {session?.exercises.map((exercise) => <ExerciseCard key={exercise.id} exercise={exercise}
-      complete={onComplete}
-      changeRest={(seconds) => void run(() => repo.updateRestDefault(date, exercise.id, seconds))}
-      update={(change) => run(() => repo.updateSession(date, (current) => {
-        const item = current.exercises.find((entry) => entry.id === exercise.id)
-        if (item) change(item)
-      }))}
-      remove={() => {
-        if (window.confirm(exercise.name + ' 기록을 삭제할까요?')) void run(() => repo.updateSession(date, (current) => {
-          current.exercises = current.exercises.filter((entry) => entry.id !== exercise.id)
-        }))
-      }} />)}
+    {session?.exercises.map((exercise) => <ExerciseCard key={exercise.id} date={date}
+      exercise={exercise} repo={repo} run={run} complete={onComplete} />)}
     {!session?.exercises.length && <Empty><Dumbbell size={26} /><p>이 날짜에 기록한 운동이 없어요.</p></Empty>}
     {adding ? <form className="panel stack" onSubmit={async (event) => {
       event.preventDefault()
       if (!matching && !name.trim()) return
-      if (await run(() => repo.addExercise(date, matching ?? { id: crypto.randomUUID(), name: name.trim(), restSeconds: Number(seconds) }))) {
-        setAdding(false); setChoice(''); setName(''); setSeconds('90')
+      if (await run(() => repo.addExercise(date, matching?.id ?? { name: name.trim(), restSeconds: Number(seconds) }))) {
+        setAdding(false)
+        setChoice('')
+        setName('')
+        setSeconds('90')
       }
     }}>
       <label>종목 선택<select value={choice} onChange={(e) => setChoice(e.target.value)}>

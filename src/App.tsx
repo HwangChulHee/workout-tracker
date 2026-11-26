@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Activity, ChartNoAxesCombined, ClipboardList, Dumbbell, History as HistoryIcon, Settings, Timer } from 'lucide-react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { localDate, type Session } from './model'
-import { WorkoutDatabase, WorkoutRepository, repository } from './repository'
+import { repository, type WorkoutRepository } from './repository'
+import { demoRepository, prepareDemo } from './demo'
 import { BodyRecords, Stats } from './Records'
 import { TimerScreen, useTimer } from './timer'
 import { Empty, History, Workout, type Run } from './Workout'
@@ -15,27 +16,6 @@ const tabs = [
   { id: 'body', label: '신체', title: '신체 기록', icon: Activity },
 ] as const
 type Tab = typeof tabs[number]['id'] | 'settings'
-
-const demoDb = new WorkoutDatabase('workout-tracker-demo')
-
-async function startDemo() {
-  await demoDb.transaction('rw', demoDb.sessions, demoDb.measurements, async () => {
-    if (await demoDb.sessions.count() || await demoDb.measurements.count()) return
-    const date = new Date()
-    date.setDate(date.getDate() - 1)
-    await demoDb.sessions.add({
-      id: crypto.randomUUID(), date: localDate(date), revision: 1, deleted: false,
-      exercises: [{
-        id: crypto.randomUUID(), exerciseKey: 'lat-pulldown', name: '랫풀다운', restSeconds: 90,
-        sets: [{ id: crypto.randomUUID(), weightKg: 35, reps: 12, completed: true }],
-      }],
-    })
-    await demoDb.measurements.add({
-      id: crypto.randomUUID(), date: localDate(date), revision: 1, weightKg: 70, skeletalMuscleKg: 31,
-      bodyFatKg: 14, bodyFatPercent: 20, heightCm: null, notes: '데모 측정',
-    })
-  })
-}
 
 function BackupSettings({ repo, run, demo, toggleDemo }: {
   repo: WorkoutRepository; run: Run; demo: boolean; toggleDemo: () => void
@@ -80,15 +60,15 @@ export default function App() {
   const [date, setDate] = useState(localDate)
   const [demo, setDemo] = useState(false)
   const [notice, setNotice] = useState<{ text: string; error: boolean }>()
-  const repo = useMemo(() => demo ? new WorkoutRepository(demoDb) : repository, [demo])
+  const repo = demo ? demoRepository : repository
   const data = useLiveQuery(async () => {
     try {
-      const [sessions, measurements, catalog] = await Promise.all([repo.watchSessions(), repo.watchMeasurements(), repo.watchCatalog()])
-      return { repo, sessions, measurements, catalog }
+      return { repo, records: await repo.readRecords() }
     } catch {
-      return { repo, error: true }
+      return { repo, records: null }
     }
   }, [repo])
+  const records = data?.repo === repo ? data.records : undefined
   const timer = useTimer()
 
   useEffect(() => {
@@ -144,21 +124,21 @@ export default function App() {
       {tab === 'timer' && <TimerScreen timer={timer} />}
       {tab === 'settings' && <BackupSettings repo={repo} run={run} demo={demo} toggleDemo={() => {
         void run(async () => {
-          if (!demo) await startDemo()
+          if (!demo) await prepareDemo()
           setDemo(!demo)
         }, demo ? '내 기록으로 돌아왔어요.' : '데모 모드를 시작했어요.')
       }} />}
       {tab !== 'timer' && tab !== 'settings' && (
-        data?.repo !== repo ? <Empty>기록을 불러오는 중이에요.</Empty>
-        : !data.sessions || !data.measurements || !data.catalog ? <Empty>기기 저장소를 열 수 없어요. 브라우저 저장소 설정을 확인해 주세요.</Empty>
+        records === undefined ? <Empty>기록을 불러오는 중이에요.</Empty>
+        : records === null ? <Empty>기기 저장소를 열 수 없어요. 브라우저 저장소 설정을 확인해 주세요.</Empty>
         : <>
-          {tab === 'workout' && <Workout key={String(demo)} date={date} setDate={setDate} sessions={data.sessions} catalog={data.catalog}
+          {tab === 'workout' && <Workout key={String(demo)} date={date} setDate={setDate} sessions={records.sessions} catalog={records.catalog}
             repo={repo} run={run} onComplete={(seconds) => { if (timer.auto) timer.start(seconds) }} />}
-          {tab === 'history' && <History sessions={data.sessions} date={date} open={openWorkout} copy={copy} remove={(date) => {
+          {tab === 'history' && <History sessions={records.sessions} date={date} open={openWorkout} copy={copy} remove={(date) => {
             if (window.confirm(date + ' 운동 기록을 삭제할까요?')) void run(() => repo.deleteSession(date))
           }} />}
-          {tab === 'stats' && <Stats sessions={data.sessions} measurements={data.measurements} />}
-          {tab === 'body' && <BodyRecords entries={data.measurements} repo={repo} run={run} />}
+          {tab === 'stats' && <Stats sessions={records.sessions} measurements={records.measurements} />}
+          {tab === 'body' && <BodyRecords entries={records.measurements} repo={repo} run={run} />}
         </>
       )}
     </main>

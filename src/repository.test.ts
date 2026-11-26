@@ -18,11 +18,14 @@ afterEach(async () => {
 describe('운동 기록', () => {
   it('저장소 재연결 후에도 기록이 유지되고 연속 수정이 모두 반영된다', async () => {
     const { db, repo } = setup()
-    await repo.addExercise(date, { id: 'squat', name: '스쿼트', restSeconds: 90 })
+    await repo.addExercise(date, 'squat')
+    const [initial] = await repo.watchSessions()
+    const [exercise] = initial.exercises
+    const [set] = exercise.sets
     await Promise.all([
-      repo.updateSession(date, (s) => { s.exercises[0].sets[0].weightKg = 42.5 }),
-      repo.updateSession(date, (s) => { s.exercises[0].sets[0].reps = 8 }),
-      repo.updateSession(date, (s) => { s.exercises[0].sets[0].completed = true }),
+      repo.updateSetValue(date, exercise.id, set.id, 'weightKg', 42.5),
+      repo.updateSetValue(date, exercise.id, set.id, 'reps', 8),
+      repo.toggleSetCompletion(date, exercise.id, set.id),
     ])
     db.close()
     const reopened = setup(db.name)
@@ -40,14 +43,14 @@ describe('운동 기록', () => {
   it('검증된 백업을 가져오고 기존 날짜는 보호한다', async () => {
     const { repo: origin } = setup()
     const { repo } = setup()
-    await origin.addExercise(date, { id: 'squat', name: '스쿼트', restSeconds: 90 })
+    await origin.addExercise(date, 'squat')
     await origin.saveMeasurement({
       id: crypto.randomUUID(), date, weightKg: 72, skeletalMuscleKg: null, bodyFatKg: null,
       bodyFatPercent: null, heightCm: null, notes: null,
     })
     const backup = JSON.stringify(await origin.exportBackup())
     expect(parseBackup(backup).schemaVersion).toBe(1)
-    await repo.addExercise(date, { id: 'bench-press', name: '벤치프레스', restSeconds: 120 })
+    await repo.addExercise(date, 'bench-press')
     expect(await repo.importBackup(backup)).toEqual({ added: 1, skipped: 1 })
     expect(await repo.importBackup(backup)).toEqual({ added: 0, skipped: 2 })
     expect((await repo.watchSessions())[0].exercises[0].name).toBe('벤치프레스')
@@ -63,13 +66,52 @@ describe('운동 기록', () => {
     expect(remainingSeconds(90_000, 120_000)).toBe(0)
   })
 
+  it('백업의 모델 외 필드는 가져오기나 재내보내기에 섞이지 않는다', async () => {
+    const { repo: source } = setup()
+    const { repo: target } = setup()
+    await source.addExercise(date, 'squat')
+    const original = await source.exportBackup()
+    const [session] = original.sessions
+    const [exercise] = session.exercises
+    const [set] = exercise.sets
+    const augmented = {
+      ...original,
+      sessions: [{
+        ...session, location: '외부 메타데이터',
+        exercises: [{ ...exercise, sets: [{ ...set, unexpected: true }] }],
+      }],
+    }
+    await target.importBackup(JSON.stringify(augmented))
+    expect(await target.exportBackup()).toEqual(original)
+  })
+
   it('휴식 설정을 이후에 추가하는 같은 운동의 기본값으로 저장한다', async () => {
     const { repo } = setup()
-    const squat = (await repo.watchCatalog()).find((entry) => entry.id === 'squat')!
-    await repo.addExercise(date, squat)
+    await repo.addExercise(date, 'squat')
     const [session] = await repo.watchSessions()
-    await repo.updateRestDefault(date, session.exercises[0].id, 75)
-    expect((await repo.watchSessions())[0].exercises[0].restSeconds).toBe(75)
-    expect((await repo.watchCatalog()).find((entry) => entry.id === 'squat')?.restSeconds).toBe(75)
+    const secondDate = '2026-11-27'
+    await Promise.all([
+      repo.updateRestDefault(date, session.exercises[0].id, 75),
+      repo.addExercise(secondDate, 'squat'),
+    ])
+    const records = await repo.readRecords()
+    expect(records.sessions.map((item) => item.exercises[0].restSeconds)).toEqual([75, 75])
+    expect(records.catalog.find((entry) => entry.id === 'squat')?.restSeconds).toBe(75)
+  })
+
+  it('연속 완료 토글은 저장된 상태에서 계산하고 삭제된 세트는 타이머를 시작하지 않는다', async () => {
+    const { repo } = setup()
+    await repo.addExercise(date, 'squat')
+    const [session] = await repo.watchSessions()
+    const [exercise] = session.exercises
+    const [set] = exercise.sets
+    const toggled = await Promise.all([
+      repo.toggleSetCompletion(date, exercise.id, set.id),
+      repo.toggleSetCompletion(date, exercise.id, set.id),
+    ])
+    expect(toggled).toEqual([180, undefined])
+    expect((await repo.watchSessions())[0].exercises[0].sets[0].completed).toBe(false)
+    await repo.removeSet(date, exercise.id, set.id)
+    expect(await repo.toggleSetCompletion(date, exercise.id, set.id)).toBeUndefined()
   })
 })

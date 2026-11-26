@@ -71,6 +71,10 @@ export function copyExercises(exercises: Exercise[]): Exercise[] {
   }))
 }
 
+export function sessionRecordIds(session: Session) {
+  return [session.id, ...session.exercises.flatMap((exercise) => [exercise.id, ...exercise.sets.map((set) => set.id)])]
+}
+
 export function sessionVolume(session: Session) {
   return session.exercises.flatMap((exercise) => exercise.sets)
     .reduce((volume, set) => volume + (set.completed ? set.weightKg * set.reps : 0), 0)

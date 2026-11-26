@@ -1,6 +1,6 @@
 import Dexie, { type EntityTable } from 'dexie'
 import { parseBackup } from './backup'
-import { catalogDefaults, copyExercises, newSet, type Backup, type CatalogEntry, type Measurement, type Session } from './model'
+import { catalogDefaults, copyExercises, newSet, sessionRecordIds, type Backup, type CatalogEntry, type Exercise, type Measurement, type Session, type SetEntry } from './model'
 
 export class WorkoutDatabase extends Dexie {
   sessions!: EntityTable<Session, 'id'>
@@ -21,15 +21,71 @@ export class WorkoutRepository {
   watchMeasurements = () => this.db.measurements.orderBy('date').reverse().toArray()
   watchCatalog = () => this.db.catalog.toArray()
 
-  updateSession(date: string, update: (session: Session) => void, create = false) {
+  readRecords() {
+    return this.db.transaction('r', this.db.sessions, this.db.measurements, this.db.catalog, async () => ({
+      sessions: await this.watchSessions(),
+      measurements: await this.watchMeasurements(),
+      catalog: await this.watchCatalog(),
+    }))
+  }
+
+  private updateSession<T>(date: string, update: (session: Session) => T, create = false) {
     return this.db.transaction('rw', this.db.sessions, async () => {
       const existing = await this.db.sessions.get({ date })
       if ((!existing || existing.deleted) && !create) return
       const session = existing ?? { id: crypto.randomUUID(), date, revision: 0, deleted: false, exercises: [] }
       session.deleted = false
-      update(session)
+      const result = update(session)
       session.revision++
       await this.db.sessions.put(session)
+      return result
+    })
+  }
+
+  private updateExercise<T>(date: string, exerciseId: string, update: (exercise: Exercise) => T) {
+    return this.updateSession(date, (session) => {
+      const exercise = session.exercises.find((item) => item.id === exerciseId)
+      if (exercise) return update(exercise)
+    })
+  }
+
+  private updateSet<T>(date: string, exerciseId: string, setId: string, update: (set: SetEntry, exercise: Exercise) => T) {
+    return this.updateExercise(date, exerciseId, (exercise) => {
+      const set = exercise.sets.find((item) => item.id === setId)
+      if (set) return update(set, exercise)
+    })
+  }
+
+  renameExercise(date: string, exerciseId: string, name: string) {
+    return this.updateExercise(date, exerciseId, (exercise) => { exercise.name = name })
+  }
+
+  removeExercise(date: string, exerciseId: string) {
+    return this.updateSession(date, (session) => {
+      session.exercises = session.exercises.filter((exercise) => exercise.id !== exerciseId)
+    })
+  }
+
+  addSet(date: string, exerciseId: string) {
+    return this.updateExercise(date, exerciseId, (exercise) => {
+      exercise.sets.push(newSet(exercise.sets.at(-1)))
+    })
+  }
+
+  removeSet(date: string, exerciseId: string, setId: string) {
+    return this.updateExercise(date, exerciseId, (exercise) => {
+      exercise.sets = exercise.sets.filter((set) => set.id !== setId)
+    })
+  }
+
+  updateSetValue(date: string, exerciseId: string, setId: string, field: 'weightKg' | 'reps', value: number) {
+    return this.updateSet(date, exerciseId, setId, (set) => { set[field] = value })
+  }
+
+  toggleSetCompletion(date: string, exerciseId: string, setId: string) {
+    return this.updateSet(date, exerciseId, setId, (set, exercise) => {
+      set.completed = !set.completed
+      return set.completed ? exercise.restSeconds : undefined
     })
   }
 
@@ -46,9 +102,13 @@ export class WorkoutRepository {
     }, true)
   }
 
-  addExercise(date: string, entry: CatalogEntry) {
+  addExercise(date: string, selection: string | Pick<CatalogEntry, 'name' | 'restSeconds'>) {
     return this.db.transaction('rw', this.db.catalog, this.db.sessions, async () => {
-      await this.db.catalog.put(entry)
+      const entry = typeof selection === 'string'
+        ? await this.db.catalog.get(selection)
+        : { id: crypto.randomUUID(), ...selection }
+      if (!entry) throw new Error('종목 목록을 새로 불러온 뒤 다시 선택해 주세요.')
+      if (typeof selection !== 'string') await this.db.catalog.add(entry)
       await this.updateSession(date, (session) => {
         session.exercises.push({
           id: crypto.randomUUID(), exerciseKey: entry.id, name: entry.name,
@@ -60,12 +120,9 @@ export class WorkoutRepository {
 
   updateRestDefault(date: string, exerciseId: string, seconds: number) {
     return this.db.transaction('rw', this.db.catalog, this.db.sessions, async () => {
-      let updated: CatalogEntry | undefined
-      await this.updateSession(date, (session) => {
-        const exercise = session.exercises.find((item) => item.id === exerciseId)
-        if (!exercise) return
+      const updated = await this.updateExercise(date, exerciseId, (exercise) => {
         exercise.restSeconds = seconds
-        updated = { id: exercise.exerciseKey, name: exercise.name, restSeconds: seconds }
+        return { id: exercise.exerciseKey, name: exercise.name, restSeconds: seconds }
       })
       if (!updated) return
       const current = await this.db.catalog.get(updated.id)
@@ -100,10 +157,10 @@ export class WorkoutRepository {
       const dates = new Set(existing.sessions.map((s) => s.date))
       const ids = new Set([
         ...existing.measurements.map((m) => m.id),
-        ...existing.sessions.flatMap((s) => [s.id, ...s.exercises.flatMap((e) => [e.id, ...e.sets.map((set) => set.id)])]),
+        ...existing.sessions.flatMap(sessionRecordIds),
       ])
-      const sessions = incoming.sessions.filter((s) => !dates.has(s.date) && !ids.has(s.id)
-        && s.exercises.every((e) => !ids.has(e.id) && e.sets.every((set) => !ids.has(set.id))))
+      const sessions = incoming.sessions.filter((s) => !dates.has(s.date)
+        && sessionRecordIds(s).every((id) => !ids.has(id)))
       const measurements = incoming.measurements.filter((m) => !ids.has(m.id))
       const keys = new Set(existing.catalog.map((c) => c.id))
       await this.db.sessions.bulkAdd(sessions)

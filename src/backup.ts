@@ -1,4 +1,4 @@
-import { isDate, type Backup } from './model'
+import { isDate, sessionRecordIds, type Backup } from './model'
 
 type RecordValue = Record<string, unknown>
 const record = (v: unknown): v is RecordValue => typeof v === 'object' && v !== null && !Array.isArray(v)
@@ -17,6 +17,12 @@ function rows(v: unknown, key: string, valid: (row: RecordValue) => boolean) {
     seen.add(row[key])
     return true
   })
+}
+
+function pick<T extends object, K extends keyof T>(row: T, ...keys: K[]): Pick<T, K> {
+  const result = {} as Pick<T, K>
+  for (const key of keys) result[key] = row[key]
+  return result
 }
 
 export function parseBackup(text: string): Backup {
@@ -43,8 +49,19 @@ export function parseBackup(text: string): Backup {
     throw new Error('백업에 잘못되거나 중복된 기록이 있습니다.')
   }
   const backup = data as unknown as Backup
-  const ids = [...backup.sessions.map((s) => s.id), ...backup.measurements.map((m) => m.id),
-    ...backup.sessions.flatMap((s) => s.exercises.flatMap((e) => [e.id, ...e.sets.map((set) => set.id)]))]
+  const ids = [...backup.sessions.flatMap(sessionRecordIds), ...backup.measurements.map((m) => m.id)]
   if (new Set(ids).size !== ids.length) throw new Error('백업에 중복된 식별자가 있습니다.')
-  return backup
+  return {
+    schemaVersion: 1,
+    sessions: backup.sessions.map((session) => ({
+      ...pick(session, 'id', 'date', 'revision', 'deleted'),
+      exercises: session.exercises.map((exercise) => ({
+        ...pick(exercise, 'id', 'exerciseKey', 'name', 'restSeconds'),
+        sets: exercise.sets.map((set) => pick(set, 'id', 'weightKg', 'reps', 'completed')),
+      })),
+    })),
+    measurements: backup.measurements.map((measurement) => pick(measurement,
+      'id', 'date', 'weightKg', 'skeletalMuscleKg', 'bodyFatKg', 'bodyFatPercent', 'heightCm', 'notes', 'revision')),
+    catalog: backup.catalog.map((entry) => pick(entry, 'id', 'name', 'restSeconds')),
+  }
 }

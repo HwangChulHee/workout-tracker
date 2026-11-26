@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { isDate, localDate, periodCounts, sessionVolume, type Measurement, type Session } from './model'
 import { Empty, type Run } from './Workout'
@@ -79,7 +79,7 @@ function Chart({ name, unit, points }: { name: string; unit: string; points: Poi
   </section>
 }
 
-export function Stats({ sessions, measurements }: { sessions: Session[]; measurements: Measurement[] }) {
+export const Stats = memo(function Stats({ sessions, measurements }: { sessions: Session[]; measurements: Measurement[] }) {
   const [selected, setSelected] = useState('')
   const completed = [...sessions].reverse().filter((session) => session.exercises.some((exercise) => exercise.sets.some((set) => set.completed)))
   const exercises = new Map(completed.flatMap((session) => session.exercises
@@ -109,4 +109,4 @@ export function Stats({ sessions, measurements }: { sessions: Session[]; measure
           return value === null ? [] : [{ date: entry.date, value }]
         })} />)}
   </>
-}
+})
