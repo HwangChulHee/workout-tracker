@@ -7,7 +7,8 @@ import { demoRepository, prepareDemo } from './demo'
 import { BodyRecords, Stats } from './Records'
 import { TimerScreen, useTimer } from './timer'
 import { Empty, History, Workout, type Run } from './Workout'
-import { SyncSettings, useGitHubSync } from './SyncSettings'
+import { SyncSettings } from './SyncSettings'
+import { useGitHubSync } from './useGitHubSync'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 
 const tabs = [
