@@ -81,3 +81,7 @@ Values above are **fictional/example entries for schema illustration**; no body 
 - Body mass and skeletal muscle metrics may be inaccurate across InBody devices/measurement conditions; display trends and do not overinterpret short-term changes.
 - Schema migrations are explicit and backward-compatible where practical. Importing a newer unsupported schema must be rejected without erasing local data.
 - Conflicts: unique IDs + revisions/tombstones + base snapshots; conflicts in the same record require user resolution. A revision integer alone does not prove that one device observed another device's changes.
+
+## Exercise ID registry and ChatGPT ingestion
+
+See [exercise catalog](../data/exercise-catalog.json) and [GPT recording protocol](exercise-recording-protocol.md). A workout exercise instance's `exerciseKey` must equal a catalog `exercises[].id`; `id` on an instance or set is a separate UUID. The catalog is versioned independently of private workout data. Keep equipment/variation-specific IDs separate and preserve ambiguity rather than making guesses. The current React local model does **not** yet support all optional fields used by the November 26 remote baseline (e.g. duration, unilateral or estimated reps); UI/import compatibility work is required before syncing those records.
