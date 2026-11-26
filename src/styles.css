@@ -61,6 +61,7 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--accent); }
 details > summary { cursor: pointer; min-height: 44px; align-content: center; color: var(--muted); }
 .segment-table { width: 100%; font-size: .875rem; }
 .segment-table th, .segment-table td { text-align: left; padding: 6px 3px; border-bottom: 1px solid var(--line); }
+.sync-diff pre { max-height: 16rem; overflow: auto; padding: 8px; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--input); }
 .chart { height: 210px; min-width: 0; }
 .timer-panel { display: grid; gap: 15px; text-align: center; }
 .clock { font-size: clamp(3.2rem, 14vw, 6rem); line-height: 1; color: var(--accent); font-weight: 800; font-variant-numeric: tabular-nums; }

@@ -137,21 +137,38 @@ export function sideWeight(set: SetEntry, side: 'left' | 'right') {
   return weight === undefined ? set.weightKg : weight
 }
 
-export function sessionVolume(session: Session) {
-  return session.exercises.reduce((volume, exercise) => {
+export function sessionVolumeSummary(session: Session) {
+  let total = 0
+  let known = false
+  let partial = false
+  let estimated = false
+  const add = (weight: number | null, reps: number | null | undefined, approximate?: boolean) => {
+    if (weight == null || reps == null) {
+      partial = true
+      return
+    }
+    total += weight * reps
+    known = true
+    estimated ||= approximate === true
+  }
+  for (const exercise of session.exercises) {
     const type = exerciseMeasurementType(exercise)
-    if (type === 'duration' || type === 'reps') return volume
+    if (type === 'duration' || type === 'reps') continue
     for (const set of exercise.sets) {
       if (!set.completed) continue
       if (type === 'unilateral-weight-reps') {
-        volume += (sideWeight(set, 'left') ?? 0) * (set.leftReps ?? 0)
-          + (sideWeight(set, 'right') ?? 0) * (set.rightReps ?? 0)
+        add(sideWeight(set, 'left'), set.leftReps, set.leftRepsEstimated ?? set.repsEstimated)
+        add(sideWeight(set, 'right'), set.rightReps, set.rightRepsEstimated ?? set.repsEstimated)
       } else {
-        volume += (set.weightKg ?? 0) * (set.reps ?? 0)
+        add(set.weightKg, set.reps, set.repsEstimated)
       }
     }
-    return volume
-  }, 0)
+  }
+  return { total, known, partial, estimated }
+}
+
+export function sessionVolume(session: Session) {
+  return sessionVolumeSummary(session).total
 }
 
 export function remainingSeconds(endAt: number, now: number) {

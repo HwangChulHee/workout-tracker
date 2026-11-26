@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { Check, Copy, Dumbbell, Plus, Trash2 } from 'lucide-react'
-import { isDate, sessionVolume, type CatalogEntry, type Exercise, type MeasurementType, type Session, type SetEntry } from './model'
+import { isDate, sessionVolumeSummary, sideWeight, type CatalogEntry, type Exercise, type MeasurementType, type Session, type SetEntry } from './model'
 import { exerciseMeasurementType, isLegacyExercise, officialCatalog, officialExercise, searchExercises } from './catalog'
 import type { WorkoutRepository } from './repository'
 
@@ -117,9 +117,10 @@ function SetEditor({ set, index, type, save, toggle, remove }: {
   </div>
 }
 
-function ExerciseCard({ date, exercise, repo, run, complete }: {
+function ExerciseCard({ date, exercise, previous, repo, run, complete }: {
   date: string
   exercise: Exercise
+  previous?: { date: string; exercise: Exercise }
   repo: WorkoutRepository
   run: Run
   complete: (seconds: number) => void
@@ -144,6 +145,14 @@ function ExerciseCard({ date, exercise, repo, run, complete }: {
       }}><Trash2 size={18} /></button>
     </div>
     {official && <p className="muted mt-2">{official.nameEn} · {[official.equipment, ...(official.modifiers ?? [])].join(' · ')}</p>}
+    {previous && <details className="mt-2">
+      <summary>이전 수행 · {previous.date}</summary>
+      <ul className="space-y-1">
+        {previous.exercise.sets.map((set, index) => <li key={set.id} className="muted">
+          {index + 1}세트 · {previousSetText(set, exerciseMeasurementType(previous.exercise))}
+        </li>)}
+      </ul>
+    </details>}
     {isLegacyExercise(exercise.exerciseKey) && <details className="mt-2">
       <summary>이전 종목 코드 확인</summary>
       <label className="mt-2">공식 종목 선택<select aria-label="공식 종목 선택" value={confirmedKey} onChange={(event) => setConfirmedKey(event.target.value)}>
@@ -180,6 +189,26 @@ function ExerciseCard({ date, exercise, repo, run, complete }: {
   </article>
 }
 
+function previousSetText(set: SetEntry, type: MeasurementType) {
+  const value = (number: number | null | undefined, unit: string, estimated = false) =>
+    number == null ? '미기록' : (estimated ? '약 ' : '') + number + unit
+  if (type === 'duration') return value(set.durationSeconds, '초', set.durationEstimated)
+  if (type === 'unilateral-weight-reps') {
+    return '왼쪽 ' + value(sideWeight(set, 'left'), 'kg')
+      + ' × ' + value(set.leftReps, '회', set.leftRepsEstimated)
+      + ' · 오른쪽 ' + value(sideWeight(set, 'right'), 'kg')
+      + ' × ' + value(set.rightReps, '회', set.rightRepsEstimated)
+  }
+  return (type === 'weight-reps' ? value(set.weightKg, 'kg') + ' × ' : '') + value(set.reps, '회', set.repsEstimated)
+}
+
+function volumeText(session: Session | undefined) {
+  if (!session) return '미기록'
+  const { known, total, partial, estimated } = sessionVolumeSummary(session)
+  if (!known) return '미기록'
+  return (estimated ? '약 ' : '') + total.toLocaleString('ko-KR', { maximumFractionDigits: 2 }) + ' kg' + (partial ? ' (일부)' : '')
+}
+
 export function Workout({ date, setDate, sessions, catalog, repo, run, onComplete }: {
   date: string; setDate: (date: string) => void; sessions: Session[]; catalog: CatalogEntry[]
   repo: WorkoutRepository; run: Run; onComplete: (seconds: number) => void
@@ -196,13 +225,25 @@ export function Workout({ date, setDate, sessions, catalog, repo, run, onComplet
   const previous = sessions.find((entry) => entry.date < date && entry.exercises.length > 0)
   const sets = session?.exercises.flatMap((exercise) => exercise.sets) ?? []
   const matching = catalog.find((entry) => entry.id === choice)
+  const latest = new Map<string, { date: string; exercise: Exercise }>()
+  for (const prior of sessions) {
+    if (prior.date >= date) continue
+    for (const exercise of prior.exercises) {
+      if (!latest.has(exercise.exerciseKey)) latest.set(exercise.exerciseKey, { date: prior.date, exercise })
+    }
+  }
+  const options = searchExercises(catalog, query).sort((left, right) =>
+    (latest.get(right.id)?.date ?? '').localeCompare(latest.get(left.id)?.date ?? ''))
 
   return <>
     <section className="panel date-panel">
       <label>운동 날짜<input type="date" value={date} onChange={(e) => { if (isDate(e.target.value)) setDate(e.target.value) }} /></label>
       <div><span className="muted">완료 세트</span><strong>{sets.filter((set) => set.completed).length}<small> / {sets.length}</small></strong></div>
-      <div><span className="muted">운동 볼륨</span><strong>{(session ? sessionVolume(session) : 0).toLocaleString('ko-KR', { maximumFractionDigits: 2 })}<small> kg</small></strong></div>
+      <div><span className="muted">운동 볼륨</span><strong>{volumeText(session)}</strong></div>
     </section>
+    {sets.some((set) => set.completed && set.durationSeconds != null) && <p className="muted">
+      기록된 유지 시간 합계 {sets.reduce((seconds, set) => seconds + (set.completed ? set.durationSeconds ?? 0 : 0), 0).toLocaleString('ko-KR')}초
+    </p>}
     <div className="section-heading">
       <h2>운동 종목</h2>
       {previous && <button className="secondary" onClick={() => {
@@ -212,7 +253,7 @@ export function Workout({ date, setDate, sessions, catalog, repo, run, onComplet
       }}><Copy size={16} /> 이전 운동 불러오기</button>}
     </div>
     {session?.exercises.map((exercise) => <ExerciseCard key={exercise.id} date={date}
-      exercise={exercise} repo={repo} run={run} complete={onComplete} />)}
+      exercise={exercise} previous={latest.get(exercise.exerciseKey)} repo={repo} run={run} complete={onComplete} />)}
     {!session?.exercises.length && <Empty><Dumbbell size={26} /><p>이 날짜에 기록한 운동이 없어요.</p></Empty>}
     {adding ? <form className="panel stack" onSubmit={async (event) => {
       event.preventDefault()
@@ -235,7 +276,7 @@ export function Workout({ date, setDate, sessions, catalog, repo, run, onComplet
         onChange={(event) => { setQuery(event.target.value); setChoice('') }} /></label>
       <label>종목 선택<select aria-label="종목 선택" value={choice} onChange={(e) => setChoice(e.target.value)}>
         <option value="">직접 입력</option>
-        {searchExercises(catalog, query).map((entry) => <option key={entry.id} value={entry.id}>
+        {options.map((entry) => <option key={entry.id} value={entry.id}>
           {[entry.name, entry.nameEn, entry.equipment, ...(entry.modifiers ?? [])].filter(Boolean).join(' · ')} ({entry.restSeconds}초)
         </option>)}
       </select></label>
@@ -271,7 +312,7 @@ export function History({ sessions, date, open, copy, remove }: {
     {visible.map((session) => <article key={session.id} className="panel stack">
       <h2>{session.date}</h2>
       <p className="muted">{session.exercises.map((entry) => entry.name).join(' · ')}</p>
-      <p>{sessionVolume(session).toLocaleString('ko-KR', { maximumFractionDigits: 2 })} kg</p>
+      <p>{volumeText(session)}</p>
       <div className="actions">
         <button className="secondary" onClick={() => open(session.date)}>수정</button>
         <button className="secondary" onClick={() => copy(session, target)} disabled={session.date === target}>복사</button>

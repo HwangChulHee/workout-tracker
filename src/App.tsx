@@ -7,6 +7,8 @@ import { demoRepository, prepareDemo } from './demo'
 import { BodyRecords, Stats } from './Records'
 import { TimerScreen, useTimer } from './timer'
 import { Empty, History, Workout, type Run } from './Workout'
+import { SyncSettings, useGitHubSync } from './SyncSettings'
+import { useRegisterSW } from 'virtual:pwa-register/react'
 
 const tabs = [
   { id: 'workout', label: '운동', title: '운동 기록', icon: Dumbbell },
@@ -52,7 +54,6 @@ function BackupSettings({ repo, run, demo, toggleDemo }: {
       <p className="muted">예시 기록은 데모 모드 전용 공간에 저장돼요.</p>
       <button className="secondary self-start" onClick={toggleDemo}>{demo ? '내 기록으로 돌아가기' : '데모 시작'}</button>
     </section>
-    <section className="panel stack"><h2>GitHub 연결</h2><p className="muted">다음 단계에서 제공할 예정이에요. 현재 기록은 이 브라우저에 저장돼요.</p></section>
   </>
 }
 
@@ -71,6 +72,13 @@ export default function App() {
   }, [repo])
   const records = data?.repo === repo ? data.records : undefined
   const timer = useTimer()
+  const { needRefresh: [updateReady, setUpdateReady], updateServiceWorker } = useRegisterSW()
+  const sync = useGitHubSync(repository)
+  const queueSync = sync.queue
+
+  useEffect(() => {
+    if (!demo && records) queueSync()
+  }, [demo, records, queueSync])
 
   useEffect(() => {
     if (!notice || notice.error) return
@@ -120,8 +128,13 @@ export default function App() {
     <main className="content stack">
       <div className="page-heading">
         <h1>{active?.title ?? '설정'}</h1>
-        <span className={demo ? 'status demo' : 'status'}><ClipboardList size={15} /> {demo ? '데모 모드' : '기기 저장'}</span>
+        <span className={demo ? 'status demo' : 'status'}><ClipboardList size={15} /> {demo ? '데모 모드' : sync.status}</span>
       </div>
+      {updateReady && <section className="panel actions" aria-label="앱 업데이트">
+        <span>새 버전을 설치할 수 있어요.</span>
+        <button className="primary" onClick={() => void updateServiceWorker(true)} disabled={sync.state === 'syncing'}>업데이트</button>
+        <button className="secondary" onClick={() => setUpdateReady(false)}>나중에</button>
+      </section>}
       {tab === 'timer' && <TimerScreen timer={timer} />}
       {tab === 'settings' && <BackupSettings repo={repo} run={run} demo={demo} toggleDemo={() => {
         void run(async () => {
@@ -129,6 +142,7 @@ export default function App() {
           setDemo(!demo)
         }, demo ? '내 기록으로 돌아왔어요.' : '데모 모드를 시작했어요.')
       }} />}
+      {tab === 'settings' && !demo && <SyncSettings sync={sync} />}
       {tab !== 'timer' && tab !== 'settings' && (
         records === undefined ? <Empty>기록을 불러오는 중이에요.</Empty>
         : records === null ? <Empty>기기 저장소를 열 수 없어요. 브라우저 저장소 설정을 확인해 주세요.</Empty>

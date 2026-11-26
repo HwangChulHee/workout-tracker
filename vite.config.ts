@@ -13,8 +13,20 @@ export default defineConfig({
   plugins: [
     react(),
     tailwind(),
+    {
+      name: 'production-content-security-policy',
+      apply: 'build',
+      transformIndexHtml: () => [{
+        tag: 'meta',
+        attrs: {
+          'http-equiv': 'Content-Security-Policy',
+          content: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://api.github.com; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'; worker-src 'self'",
+        },
+        injectTo: 'head-prepend',
+      }],
+    },
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       manifest: {
         name: 'Workout Tracker',
         short_name: 'Workout',

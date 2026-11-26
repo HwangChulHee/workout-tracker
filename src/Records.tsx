@@ -1,6 +1,6 @@
 import { memo, useRef, useState } from 'react'
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { isDate, localDate, periodCounts, sessionVolume, sideWeight, type Measurement, type Session } from './model'
+import { isDate, localDate, periodCounts, sessionVolumeSummary, sideWeight, type Measurement, type Session } from './model'
 import { Empty, type Run } from './Workout'
 import type { WorkoutRepository } from './repository'
 import { bodyTrends, coreBodyMetrics, detailedBodyMetrics, segmentMetrics, segments } from './bodyMetrics'
@@ -61,7 +61,7 @@ export function BodyRecords({ entries, repo, run }: { entries: Measurement[]; re
       </div>
     </form>
     {!entries.length && <Empty>저장된 신체 기록이 없어요.</Empty>}
-    {entries.map((entry) => <article className="panel stack" key={entry.id}>
+    {entries.map((entry, index) => <article className="panel stack" key={entry.id}>
       <h2>{entry.date}</h2>
       <div className="form-grid">
         {[...coreBodyMetrics, ...detailedBodyMetrics].map(({ key, label, unit }) => entry[key] == null ? null
@@ -78,6 +78,7 @@ export function BodyRecords({ entries, repo, run }: { entries: Measurement[]; re
       {entry.device && <p><span className="muted">측정 장비</span> {entry.device}</p>}
       {entry.measurementConditions && <p className="whitespace-pre-wrap break-words">{entry.measurementConditions}</p>}
       {entry.missingFields?.length ? <p className="muted">미측정 항목 {entry.missingFields.length}개</p> : null}
+      {entries[index + 1] && <MeasurementComparison current={entry} previous={entries[index + 1]} />}
       {entry.notes && <p className="whitespace-pre-wrap break-words">{entry.notes}</p>}
       <div className="actions">
         <button className="secondary" onClick={() => {
@@ -91,6 +92,23 @@ export function BodyRecords({ entries, repo, run }: { entries: Measurement[]; re
     </article>)}
     <BodyTrends entries={entries} />
   </>
+}
+
+function MeasurementComparison({ current, previous }: { current: Measurement; previous: Measurement }) {
+  const comparisons = bodyTrends.flatMap(({ key, label, unit }) => {
+    const now = current[key]
+    const before = previous[key]
+    if (now == null || before == null) return []
+    return [{ label, value: (now - before).toLocaleString('ko-KR', { maximumFractionDigits: 2, signDisplay: 'exceptZero' }),
+      unit: key === 'bodyFatPercent' ? '%p' : unit }]
+  })
+  return <details>
+    <summary>이전 측정과 비교 · {previous.date}</summary>
+    {comparisons.length ? <dl className="form-grid">{comparisons.map(({ label, value, unit }) => <div key={label}>
+      <dt className="muted">{label}</dt><dd>{value} {unit}</dd>
+    </div>)}</dl> : <p className="muted">두 기록에 공통으로 측정된 지표가 없어요.</p>}
+    <p className="muted mt-2">수치는 측정 시각이나 조건에 따라 달라질 수 있어요.</p>
+  </details>
 }
 
 type Point = { date: string; value: number }
@@ -114,12 +132,25 @@ function Chart({ name, unit, points }: { name: string; unit: string; points: Poi
 }
 
 function BodyTrends({ entries }: { entries: Measurement[] }) {
-  const chronological = [...entries].sort((a, b) => a.date.localeCompare(b.date))
-  return bodyTrends.map(({ key, label, unit }) => <Chart key={key} name={label + ' 추세'} unit={unit}
+  const [days, setDays] = useState('all')
+  const cutoff = new Date()
+  cutoff.setDate(cutoff.getDate() - (days === 'all' ? 0 : Number(days) - 1))
+  const earliest = localDate(cutoff)
+  const chronological = entries.filter((entry) => days === 'all' || entry.date >= earliest)
+    .sort((a, b) => a.date.localeCompare(b.date))
+  return <>
+    {entries.length > 0 && <label className="panel">신체 지표 추세 기간
+      <select value={days} onChange={(event) => setDays(event.target.value)}>
+        <option value="all">전체</option><option value="30">최근 30일</option><option value="90">최근 90일</option>
+        <option value="365">최근 1년</option>
+      </select>
+    </label>}
+    {bodyTrends.map(({ key, label, unit }) => <Chart key={key} name={label + ' 추세'} unit={unit}
     points={chronological.flatMap((entry) => {
       const value = entry[key]
       return value == null ? [] : [{ date: entry.date, value }]
-    })} />)
+    })} />)}
+  </>
 }
 
 export const Stats = memo(function Stats({ sessions, measurements }: { sessions: Session[]; measurements: Measurement[] }) {
@@ -150,7 +181,10 @@ export const Stats = memo(function Stats({ sessions, measurements }: { sessions:
       {[...exercises].map(([id, name]) => <option key={id} value={id}>{name}</option>)}
     </select></label>}
     <Chart name="종목별 최고 중량" unit="kg" points={weights} />
-    <Chart name="운동 볼륨" unit="kg" points={completed.map((session) => ({ date: session.date, value: sessionVolume(session) }))} />
+    <Chart name="운동 볼륨" unit="kg" points={completed.flatMap((session) => {
+      const volume = sessionVolumeSummary(session)
+      return volume.known ? [{ date: session.date, value: volume.total }] : []
+    })} />
     <BodyTrends entries={measurements} />
   </>
 })
