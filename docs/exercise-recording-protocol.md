@@ -1,42 +1,42 @@
-# Exercise catalog and GPT recording protocol (v1)
+# 운동 카탈로그와 GPT 기록 프로토콜 (v1)
 
-## Source of truth
+## 기준 데이터
 
-The authoritative **public** catalog is [data/exercise-catalog.json](../data/exercise-catalog.json) in `workout-tracker`. The **private** logs live in `HwangChulHee/workout-data`, currently `workouts/YYYY-MM.json`. Read the current catalog and the target month file **on each write**. Never assume cached chat memory is more up-to-date than GitHub. The catalog's `id` is the stored workout `exerciseKey`. Do **not** treat external provider exercise numbers as universal standards.
+공식 카탈로그는 `workout-tracker` 공개 저장소의 [data/exercise-catalog.json](../data/exercise-catalog.json)입니다. 개인 운동 기록은 `HwangChulHee/workout-data` 비공개 저장소의 `workouts/YYYY-MM.json`에 있습니다. 기록을 저장할 때마다 최신 카탈로그와 해당 월 파일을 확인합니다. 카탈로그의 `id`를 운동 기록의 `exerciseKey`로 사용합니다. 외부 서비스의 운동 번호는 해당 서비스에서만 유효한 식별자로 취급합니다.
 
-## Conversational ingestion checklist
+## 대화에서 운동 기록을 입력하는 절차
 
-1. Extract explicitly stated local calendar date, exercise wording, machine/equipment, movement variation, side, weight, successful reps or hold seconds, rest interval and notes. Do not infer precise times or gym locations. If date is omitted, resolve from user timezone only when it is clear the user means today.
-2. Normalize only spelling, whitespace and familiar abbreviations. Match precise `nameKo`, `nameEn`, or `aliases` to a **single** catalog entry. A match must also agree with known equipment and variation. Do not let a generic name override explicit machine/Smith/band/one-arm information.
-3. For broad/ambiguous words such as `로우`, `스쿼트`, `숄더프레스`, `풀업`, check `ambiguousTerms`. Use prior user-confirmed variant **only when the context says the same exercise/machine**; otherwise ask one specific clarification. When uncertainty is not resolvable, retain original wording in a staging draft, without writing an invented key.
-4. New exercise: propose a stable, descriptive ASCII kebab-case `id`; append it to the catalog first **only once variation/equipment are known**. Avoid changing existing IDs. Add aliases for chat variants, but never aliases that would collapse different physical exercises. Never repurpose an old ID.
-5. Keep three identifiers distinct: `exerciseKey` = catalog stable ID; session/exercise-instance `id` = unique UUID; set `id` = unique UUID. Different dates or repeated entries of the same movement need different instance UUIDs.
-6. Record only **successful** reps in `reps`. Failed attempts are metadata, e.g. `failedAttemptRep`; they are not added to volume. Differentiate `repsEstimated`, `durationEstimated`, `restSecondsEstimated`; never silently convert approximate to confirmed. Use `null` for unknown counts/weights rather than 0 or invented values.
-7. Respect measurement type. `duration` → `durationSeconds` (not reps); `reps` → reps without fabricated weight; `unilateral-weight-reps` → `leftReps` and `rightReps`, with weight per arm and combined volume explicitly calculated if appropriate. For machine weight, avoid making equivalence claims across machine models.
-8. User's stated session totals are cross-checks, not a license to rewrite individual sets. Calculate set count and known-volume from details; flag discrepancy. Derived e1RM and volume are **not** primary source truth.
-9. On write, GET current `workouts/YYYY-MM.json`; if absent, create schemaVersion 1 monthly container. Match a pre-existing session by date and stable IDs; never duplicate the same session on retries. Preserve unrelated sessions, notes, unknown extension fields and tombstones. Apply GitHub SHA precondition, refetch and reconcile on conflict, then verify saved JSON by reading it again.
-10. If a workout date already exists, treat new statements as additions/corrections and preserve existing entries unless a user explicitly wants replacement. If a correction could alter uncertain notes, store the corrected interpretation and keep a useful audit note.
-11. Commit to **private data repo only**; never put real workouts, body composition, or PAT in public repo. After saving, report affected date, counts, inferred items and Git commit URL.
+1. 사용자가 명시한 날짜, 종목명, 장비, 동작 변형, 좌우 구분, 중량, 성공 횟수나 유지 시간, 휴식, 메모를 추출합니다. 정확한 시각과 운동 장소는 추정하지 않습니다. 날짜가 생략된 경우 사용자가 오늘을 뜻하는 것이 분명할 때만 사용자 시간대를 기준으로 날짜를 정합니다.
+2. 표기, 공백, 익숙한 약어만 정규화합니다. `nameKo`, `nameEn`, `aliases`로 카탈로그 항목 하나를 찾고, 알려진 장비와 동작 변형까지 일치하는지 확인합니다. 머신, 스미스머신, 밴드 보조, 한팔 수행처럼 명시된 정보가 매칭 기준입니다.
+3. `로우`, `스쿼트`, `숄더프레스`, `풀업`처럼 범위가 넓은 이름은 `ambiguousTerms`를 확인합니다. 같은 동작이나 장비라는 맥락이 분명할 때만 사용자가 이전에 확인한 변형을 적용합니다. 그 외에는 구체적인 질문 하나로 확인합니다. 확정할 수 없으면 초안에 원래 표현을 남겨 두고 종목 키 입력을 보류합니다.
+4. 새 종목은 동작 변형과 장비가 확인된 뒤 의미가 분명한 ASCII 케밥 표기법의 안정적인 `id`를 제안하고 카탈로그에 먼저 추가합니다. 기존 ID를 유지하고 다른 동작에 재사용하지 않습니다. 별칭은 같은 동작의 표현 차이를 연결하는 데 사용합니다.
+5. 카탈로그의 `exerciseKey`, 세션과 운동 인스턴스의 `id`, 세트의 `id`를 구분합니다. 세션, 운동 인스턴스, 세트에는 각각 UUID를 부여합니다. 날짜가 다르거나 같은 동작을 여러 번 추가한 경우에도 각 인스턴스의 UUID는 별도입니다.
+6. `reps`에는 **성공 횟수만** 입력합니다. 실패한 시도는 `failedAttemptRep` 같은 메타데이터에 기록하고 볼륨에서 제외합니다. `repsEstimated`, `durationEstimated`, `restSecondsEstimated`로 추정 항목을 구분합니다. 모르는 횟수나 중량에는 `null`을 사용합니다.
+7. 운동별 기록 방식을 따릅니다. `duration`은 `durationSeconds`에 유지 시간을 저장하고, `reps`는 횟수만 저장합니다. `unilateral-weight-reps`는 `leftReps`, `rightReps`와 각 팔의 중량을 기록하고 필요한 경우 양쪽 볼륨을 계산합니다. 머신 중량은 모델마다 다른 저항을 나타낼 수 있습니다.
+8. 사용자가 말한 세션 합계는 검산에 사용합니다. 개별 세트에서 세트 수와 계산 가능한 볼륨을 구하고, 차이가 있으면 표시합니다. 추정 1RM(e1RM)과 볼륨은 원본 세트에서 파생되는 값입니다.
+9. 저장할 때 현재 `workouts/YYYY-MM.json`을 GET으로 읽습니다. 파일이 없으면 `schemaVersion: 1`인 월별 파일을 만듭니다. 날짜와 고정 ID로 기존 세션을 찾아 같은 작업을 재시도해도 세션이 중복되지 않도록 합니다. 관련 없는 세션, 메모, 확장 필드, 삭제 표식을 보존합니다. GitHub 쓰기 요청에 SHA 사전 조건을 적용하고 충돌 시 다시 읽어 조정합니다. 쓰기 후 파일을 다시 조회해 결과를 검증합니다.
+10. 해당 날짜에 운동 기록이 있다면 새로 받은 내용은 추가 또는 정정으로 처리합니다. 기존 내용을 교체하려면 사용자의 명시적인 요청이 필요합니다. 정정이 기존의 불확실한 해석에 영향을 주면 수정된 해석과 변경 근거를 남깁니다.
+11. 실측 운동·체성분 기록은 **비공개 데이터 저장소에만** 커밋합니다. PAT는 저장소에 커밋하지 않습니다. 저장 후 날짜, 건수, 추정 항목, Git 커밋 URL을 알려 줍니다.
 
-## Cases to distinguish
+## 구분해야 할 운동
 
-| Input | Key | Why |
+| 입력 | 종목 키 | 구분 기준 |
 | --- | --- | --- |
-| `체프 머신 51kg 6회` | `machine-chest-press` | machine |
-| `스미스 스쿼트 50kg` | `smith-machine-squat` | guided bar vs free bar |
-| `바벨 백스쿼트 50kg` | `barbell-back-squat` | free bar |
-| `밴드 풀업 5회` | `band-assisted-pull-up` | assistance specified |
-| `맨몸 풀업 5회` | `bodyweight-pull-up` | no band |
-| `가슴패드 수평 로우` | `chest-supported-horizontal-row` | distinct from cable row |
-| `케이블 사레레 왼10 오른6` | `single-arm-cable-lateral-raise` | side-specific reps |
-| `오트익 15kg 7회 정도` | `cable-overhead-triceps-extension` | context-confirmed alias, estimated reps |
+| `체프 머신 51kg 6회` | `machine-chest-press` | 전용 머신 |
+| `스미스 스쿼트 50kg` | `smith-machine-squat` | 가이드 레일을 따라 움직이는 바 |
+| `바벨 백스쿼트 50kg` | `barbell-back-squat` | 프리 웨이트 바벨 |
+| `밴드 풀업 5회` | `band-assisted-pull-up` | 밴드 보조 |
+| `맨몸 풀업 5회` | `bodyweight-pull-up` | 보조 없이 수행 |
+| `가슴패드 수평 로우` | `chest-supported-horizontal-row` | 가슴을 지지하는 수평 로우 머신 |
+| `케이블 사레레 왼10 오른6` | `single-arm-cable-lateral-raise` | 좌우 횟수 개별 기록 |
+| `오트익 15kg 7회 정도` | `cable-overhead-triceps-extension` | 문맥에서 확인된 별칭과 추정 횟수 |
 
-## Compatibility with current React app
+## 현재 React 앱과의 호환성
 
-The app loads this JSON as its built-in catalog. Stored custom entries and rest preferences remain available. Historical generic keys such as `squat` and `seated-row` remain on their records until the user confirms an official variant. Confirmation updates the exercise key and its label without replacing the exercise instance or set UUIDs.
+앱은 이 JSON을 기본 카탈로그로 사용합니다. 저장된 사용자 종목과 휴식 설정은 유지됩니다. `squat`, `seated-row`처럼 포괄적인 이전 키는 사용자가 공식 변형을 확인할 때까지 해당 기록에 남습니다. 확인하면 종목 키와 표시 이름을 바꾸고 운동 인스턴스와 세트의 UUID는 유지합니다.
 
-The app supports nullable weights and reps, duration, unilateral sets, estimate flags, failed attempts, and notes. Settings can import monthly workout JSON and v1 local backups. App backups export as v2. The conversational remote-write steps above describe a separate workflow.
+앱은 중량·횟수 누락, 유지 시간, 좌우 개별 세트, 추정 여부, 실패한 시도, 메모를 지원합니다. 설정에서 월별 운동 JSON과 v1 로컬 백업을 가져올 수 있으며, 앱 백업은 v2로 내보냅니다. 위의 대화 기반 원격 저장 절차는 앱의 로컬 가져오기와 별도의 흐름입니다.
 
-## Catalog evolution
+## 카탈로그 관리
 
-Add a new entry with unique stable kebab-case `id`, Korean/English names, safe aliases, muscle/equipment classification, measurement type and default rest. Version the catalog. Old entries remain valid even if the display name changes. Remove an alias if it becomes ambiguous, not the existing ID.
+새 항목에는 고유하고 안정적인 케밥 표기법의 `id`, 한국어·영어 이름, 명확한 별칭, 근육·장비 분류, 기록 방식, 기본 휴식 시간을 추가합니다. 카탈로그 변경은 버전으로 관리합니다. 표시 이름이 바뀌어도 기존 ID를 유지합니다. 모호해진 별칭은 목록에서 제거할 수 있습니다.

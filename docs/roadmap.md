@@ -1,59 +1,71 @@
-# Implementation roadmap
+# 구현 로드맵
 
-Phase 1 is implemented, including the official exercise catalog, extended set and InBody models, and local JSON exchange.
+공식 운동 카탈로그, 확장 세트·인바디 모델, 로컬 JSON 가져오기·내보내기를 포함한 1단계를 구현했습니다.
 
-## Phase 1 — Mobile-first UI and local functionality
-- Scaffold Vite/React/TypeScript and set the GitHub Pages base path.
-- Build installable-feeling responsive screens: today's workout, history/calendar, statistics, rest timer, body measurements, settings/token connection.
-- Add exercise catalog, customizable exercises, ordered sets, weight/reps, done state, rest duration, copy previous workout.
-- Persist real data in IndexedDB (Dexie). Keep sample/demo records *only in explicitly marked demo mode*, never mixed into real data.
-- Implement date-based session grouping and local backup JSON export/import.
-- Timer uses target end timestamp; visual completion and best-effort Android vibration.
-**Acceptance:** refresh/restart preserves records; offline local recording works; responsive on Galaxy-sized screens; no network/PAT needed for Phase 1.
+## 1단계 — 모바일 우선 화면과 로컬 기능
 
-## Phase 2 — GitHub private storage and auth
-- User enters a fine-grained PAT manually; choose session-only token by default or explicitly opt-in local persistence.
-- Validate repo access to HwangChulHee/workout-data and distinguish expired token, missing permission, rate limit, connectivity.
-- Implement GET and conditional Contents API PUT for workout and body JSON files; verify browser CORS in production Pages.
-- Show local/remote status clearly; no token in logs or artifacts.
-**Acceptance:** create, read, edit and delete sample records via a token-restricted private repo using real browsers; user can disconnect without destroying unsynced records. Never test by uploading real secrets.
+- Vite, React, TypeScript 프로젝트를 구성하고 GitHub Pages 기본 경로를 설정합니다.
+- 오늘의 운동, 이력과 날짜 조회, 통계, 휴식 타이머, 신체 측정, 설정과 토큰 연결 안내에 사용할 반응형 화면을 제공합니다.
+- 운동 카탈로그와 사용자 종목, 순서가 있는 세트, 중량·횟수, 완료 상태, 휴식 시간, 이전 운동 복사를 지원합니다.
+- 실제 기록은 Dexie로 IndexedDB에 저장합니다. 예시는 명확히 표시한 데모 모드에만 저장합니다.
+- 날짜별 운동 세션과 JSON 백업의 내보내기·가져오기를 지원합니다.
+- 타이머는 종료 예정 시각을 사용하고, 종료 상태를 화면에 표시합니다. Android에서 지원되는 경우 진동을 시도합니다.
 
-## Phase 3 — Reliable synchronization
-- Durable local outbox, operation IDs, de-duplication, retry/backoff and online/focus-triggered sync.
-- SHA-based conflict detection; refetch and merge disjoint operations; user resolution for same-field or delete-vs-edit.
-- Tombstones and stale-device tests.
-- Cover three cases: one device offline, two devices adding different records, two devices modifying the same record.
-**Acceptance:** no silent data loss or duplicate records across defined scenarios; 'synced' displayed only when confirmed remotely.
+**완료 기준** — 새로고침과 브라우저 재실행 후 기록이 남고, 오프라인으로 기록할 수 있으며, Galaxy 크기 화면에서 사용할 수 있습니다. 네트워크와 PAT 없이 1단계 기능이 동작합니다.
 
-## Phase 4 — PWA and Pages deployment
-- Manifest, icons, service worker app-shell caching; no caching private API data.
-- GitHub Actions build+deploy static artifacts to Pages. Confirm only public code/assets go to dist.
-- Verify `/workout-tracker/` routing, install on Galaxy Chrome, refresh after install, offline launch, network reconnection.
-- Test background/locked-screen timer limitations; don't promise guaranteed vibration.
-**Acceptance:** GitHub Pages URL loads on mobile/desktop, installs as PWA where supported, retains local data.
+## 2단계 — GitHub 비공개 저장소와 인증
 
-## Phase 5 — Statistics, usability & hardening
-- Trends: exercise performance, volume, training frequency, body weight, muscle mass and body fat.
-- Accessibility, large tap targets and quick-add/edit flow for use between sets.
-- Token rotation UI, restrictive CSP, input/schema validation, error handling.
-- Backup/restore and repeatable test checklist.
-**Acceptance:** core flows work with no lost local edits; no private info in built artifacts; README documents limitations.
+- 사용자가 fine-grained PAT를 직접 입력합니다. 기본값은 세션 동안만 보관하며, 사용자가 선택하면 기기에 저장합니다.
+- `HwangChulHee/workout-data` 접근을 확인합니다. 토큰 만료, 권한 부족, API 사용량 제한, 네트워크 문제를 구분합니다.
+- 운동과 신체 JSON 파일을 GET으로 읽고, Contents API로 조건부 PUT을 수행합니다. 배포된 Pages 브라우저 환경에서 CORS 동작을 확인합니다.
+- 로컬과 원격 저장 상태를 구분해 표시합니다. 토큰은 로그나 빌드 결과물에 넣지 않습니다.
 
-## Out of scope for MVP
-- Cloudflare/EC2/RDS/backend server
-- Public social feed or multi-user auth
-- Guaranteed background vibration or push alerts
-- AI coaching, nutrition advice, health integrations
-- Automatic synchronization on a fixed schedule while the app is closed
+**완료 기준** — 실제 브라우저에서 권한이 제한된 비공개 저장소의 예시 기록을 생성·조회·수정·삭제할 수 있습니다. 연결을 해제해도 미전송 기록은 유지됩니다. 테스트에는 실제 시크릿을 업로드하지 않습니다.
 
-## Suggested first Codex prompt
+## 3단계 — 동기화 안정성
+
+- 영속적인 전송 대기열, 작업 ID, 중복 방지, 지연 시간을 늘리는 재시도, 온라인 전환과 앱 포커스 시 동기화를 구현합니다.
+- SHA로 충돌을 감지하고, 변경 범위가 겹치지 않으면 최신 원격 기록을 다시 읽어 병합합니다. 같은 필드 변경 또는 삭제와 수정이 맞물리면 사용자가 해결할 수 있게 합니다.
+- 삭제 표식을 적용하고 오래 오프라인이었던 기기의 동작을 테스트합니다.
+- 한 기기가 오프라인인 경우, 두 기기가 다른 기록을 추가하는 경우, 두 기기가 같은 기록을 수정하는 경우를 검증합니다.
+
+**완료 기준** — 검증 시나리오에서 데이터가 사라지거나 기록이 중복되지 않습니다. 원격 저장을 확인한 뒤에만 동기화 완료로 표시합니다.
+
+## 4단계 — PWA와 Pages 배포
+
+- 매니페스트, 아이콘, 서비스 워커의 앱 실행용 정적 파일 캐시를 확인합니다. 비공개 API 응답은 캐시에 넣지 않습니다.
+- GitHub Actions로 정적 결과물을 빌드하고 Pages에 배포합니다. `dist/`에는 공개 코드와 정적 파일만 포함되는지 확인합니다.
+- `/workout-tracker/` 경로, Galaxy Chrome에서의 설치, 설치 후 새로고침, 오프라인 실행, 네트워크 재연결을 검증합니다.
+- 백그라운드와 화면 잠금 상태에서의 타이머 제약을 확인합니다. 이 상태에서 진동은 보장하지 않습니다.
+
+**완료 기준** — GitHub Pages 주소가 모바일과 데스크톱에서 열리고, 지원 환경에서 PWA를 설치할 수 있으며, 로컬 데이터가 유지됩니다.
+
+## 5단계 — 통계, 사용성, 보안 개선
+
+- 운동 성과, 볼륨, 운동 빈도, 체중, 골격근량, 체지방 추세를 개선합니다.
+- 접근성을 높이고, 터치 영역을 넓게 유지하며, 세트 사이에 빠르게 기록을 추가하거나 수정할 수 있게 합니다.
+- 토큰 교체 UI, 엄격한 CSP, 입력과 스키마 검증, 오류 처리를 강화합니다.
+- 백업과 복원 절차 및 반복 실행할 수 있는 테스트 체크리스트를 마련합니다.
+
+**완료 기준** — 주요 화면에서 작업할 때 로컬 변경 사항이 사라지지 않고, 빌드 결과물에 비공개 정보가 포함되지 않으며, README에 제약 사항이 명시됩니다.
+
+## MVP 범위 밖
+
+- Cloudflare, EC2, RDS 또는 별도 백엔드 서버
+- 공개 소셜 피드와 다중 사용자 인증
+- 백그라운드에서의 진동이나 푸시 알림 보장
+- AI 코칭, 영양 조언, 건강 서비스 연동
+- 앱을 닫은 상태에서 일정에 따라 자동 동기화
+
+## 1단계 초기 구현 요청 예시
+
 ```text
-Read README.md, docs/architecture.md, docs/data-model.md, and docs/roadmap.md.
-Implement Phase 1 only: Vite/React/TypeScript mobile-first PWA-like workout
-tracking screens with Dexie local-first persistence, sets/weight/reps,
-rest timer using an end timestamp, workout history, body metrics, and JSON
-export/import. Make the demo optional and clearly labeled.
-Do not introduce Cloudflare/backend or commit secrets. Do not attempt to
-connect to workout-data or implement PAT authentication yet.
-Include simple tests and run build/lint/test checks.
+README.md, docs/architecture.md, docs/data-model.md, docs/roadmap.md를 읽어 주세요.
+1단계만 구현해 주세요. Vite, React, TypeScript로 PWA 형태의 모바일 우선 운동 기록
+화면을 만들고, Dexie로 로컬에 저장해 주세요. 세트·중량·횟수, 종료 예정 시각 기반
+휴식 타이머, 운동 이력, 신체 측정값, JSON 내보내기·가져오기를 구현해 주세요.
+데모는 선택할 수 있게 하고 데모임을 명확히 표시해 주세요.
+Cloudflare나 백엔드는 추가하지 말고 시크릿을 커밋하지 마세요.
+이번 단계에서는 workout-data 연결과 PAT 인증을 구현하지 마세요.
+핵심 테스트를 작성하고 빌드·린트·테스트를 실행해 주세요.
 ```

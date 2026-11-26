@@ -1,70 +1,70 @@
 # Workout Tracker
 
-A mobile-first, installable workout log for tracking strength training, rest intervals, and body-composition trends.
+근력 운동, 세트 사이 휴식, 체성분 변화를 기록하는 모바일 우선 앱입니다. 지원하는 브라우저에서 홈 화면에 설치할 수 있습니다.
 
-> **Status:** Phase 1 is implemented. The app stores workout and body records locally and can run offline after its first successful load. GitHub sync and the Pages deployment workflow are future phases.
+> **현재 상태** — 1단계 구현을 완료했습니다. 운동과 신체 기록은 기기에 저장되며, 처음 온라인에서 앱을 불러온 뒤에는 오프라인에서도 사용할 수 있습니다. GitHub 동기화와 Pages 배포 워크플로는 이후 단계에서 구현합니다.
 
-## Repositories
+## 저장소
 
-| Repository | Visibility | Purpose |
+| 저장소 | 공개 범위 | 용도 |
 | --- | --- | --- |
-| [workout-tracker](https://github.com/HwangChulHee/workout-tracker) | Public | React PWA source, documentation, GitHub Pages |
-| [workout-data](https://github.com/HwangChulHee/workout-data) | Private | Personal workout and body-composition JSON |
+| [workout-tracker](https://github.com/HwangChulHee/workout-tracker) | 공개 | React PWA 소스, 문서, GitHub Pages |
+| [workout-data](https://github.com/HwangChulHee/workout-data) | 비공개 | 개인 운동과 체성분 기록 JSON |
 
-The app shell is public. Phase 1 stores personal records in IndexedDB on the device. The planned remote sync will require a user-supplied, narrowly scoped GitHub fine-grained personal access token (PAT). The token must never be committed, bundled into frontend code, included in URLs, or placed in GitHub Actions secrets for this design.
+앱의 정적 파일은 공개되며, 1단계의 개인 기록은 기기 내 IndexedDB에 저장됩니다. 향후 원격 동기화에서는 사용자가 권한을 제한한 GitHub 개인 액세스 토큰(fine-grained PAT)을 직접 입력합니다. 토큰을 커밋하거나 프런트엔드 번들, URL, GitHub Actions 시크릿에 넣지 않습니다.
 
-## Core features
+## 주요 기능
 
-- Workout sessions organized by calendar date (no gym location or precise visit time collected)
-- Korean/English exercise catalog search, including aliases, equipment, and movement variations. Set entry supports weight and reps, duration, and left/right tracking.
-- Rest countdown with vibration on supported Android devices (best-effort only while active)
-- Previous-session recall and quick set duplication
-- Workout history and trends (frequency, sets, volume, exercise progress)
-- InBody records and trends with device, measurement conditions, and optional segmental readings
-- Offline-first local saving and JSON export/import. Manual and automatic GitHub sync are planned.
+- 날짜별 운동 기록. 운동 장소와 정확한 방문 시각은 수집하지 않습니다.
+- 한국어·영어 이름, 별칭, 장비, 동작 변형으로 운동 종목 검색
+- 중량·횟수, 유지 시간, 좌우 개별 세트 기록
+- 휴식 카운트다운과 지원하는 Android 기기의 진동. 앱이 활성 상태여도 동작은 브라우저 지원에 따라 달라집니다.
+- 이전 운동 불러오기와 세트 복제
+- 운동 이력과 빈도, 세트 수, 볼륨, 종목별 변화 확인
+- 인바디 기록과 추세 그래프, 측정 장비·조건, 선택적 부위별 수치
+- 오프라인 우선 로컬 저장과 JSON 내보내기·가져오기. 수동·자동 GitHub 동기화는 계획 단계입니다.
 
-## Technology
+## 기술 스택
 
-React, TypeScript, Vite, Tailwind CSS, Dexie, Lucide React, Recharts, Vitest, and a PWA service worker. The deployment plan uses GitHub Pages without an always-on server or database service. The intended operating cost is 0 KRW/month within free-tier limits.
+React, TypeScript, Vite, Tailwind CSS, Dexie, Lucide React, Recharts, Vitest와 PWA 서비스 워커를 사용합니다. 별도 상시 서버나 데이터베이스 서비스 없이 GitHub Pages에 배포하는 구조이며, 무료 사용량 안에서 월 운영비 0원을 목표로 합니다.
 
 ```text
-Galaxy / desktop browser
-    ├── React PWA + IndexedDB (offline-first)
-    ├── locally entered GitHub fine-grained PAT
-    └── HTTPS → GitHub REST API → workout-data (PRIVATE)
+Galaxy / 데스크톱 브라우저
+    ├── React PWA + IndexedDB (오프라인 우선)
+    ├── 기기에서 직접 입력한 GitHub fine-grained PAT (동기화 도입 후)
+    └── HTTPS → GitHub REST API → workout-data (비공개)
 
-GitHub Pages ← built static assets from workout-tracker (PUBLIC)
+GitHub Pages ← workout-tracker의 정적 빌드 결과물 (공개)
 ```
 
-## Development plan
+## 개발 계획
 
-1. **UI & local data:** responsive mobile-first screens, exercises/sets, rest timer, Dexie, demo mode
-2. **Private GitHub integration:** PAT entry/validation, read/write JSON, minimal repository permissions
-3. **Offline synchronization:** pending operations, SHA preconditions, conflict detection/merge and retries
-4. **PWA & deployment:** install/offline shell, GitHub Actions → Pages, Android testing
-5. **Statistics & polish:** exercise trends, body composition charts, backup/import/export
+1. **화면과 로컬 데이터** — 모바일 우선 반응형 화면, 종목과 세트, 휴식 타이머, Dexie, 데모 모드
+2. **GitHub 비공개 저장소 연동** — PAT 입력과 검증, JSON 읽기·쓰기, 최소 저장소 권한
+3. **오프라인 동기화** — 미전송 작업, SHA 사전 조건, 충돌 감지·병합, 재시도
+4. **PWA와 배포** — 설치와 오프라인 실행, GitHub Actions를 통한 Pages 배포, Android 검증
+5. **통계와 사용성 개선** — 운동 추세, 체성분 차트, 백업·가져오기·내보내기
 
-See [architecture](docs/architecture.md), [data model](docs/data-model.md), and [implementation roadmap](docs/roadmap.md).
+자세한 내용은 [아키텍처](docs/architecture.md), [데이터 모델](docs/data-model.md), [구현 로드맵](docs/roadmap.md)을 참고하세요.
 
-## Exercise code registry
+## 운동 코드
 
-- [Versioned exercise catalog](data/exercise-catalog.json): 16 stable exercise IDs, Korean/English names, safe aliases, equipment, target muscles and measurement types. Existing 2026-11-26 workout-data keys are preserved.
-- [GPT workout recording protocol](docs/exercise-recording-protocol.md): instructions for matching conversation wording to an exercise code, preserving unknown or estimated values, and safely committing to the private data repository.
-- **Integration pending:** the Phase 1 React app currently still uses its preliminary hardcoded catalog in `src/model.ts`. Codex needs to integrate the JSON registry and update types for durations, unilateral sets and uncertain repetitions before the GitHub sync phase. These documents alone do not change UI behavior.
+- [공식 운동 카탈로그](data/exercise-catalog.json)에는 고정 종목 ID 16개와 한국어·영어 이름, 별칭, 장비, 주요 근육, 기록 방식이 들어 있습니다. 기존 기록에 사용된 키는 보존합니다.
+- [GPT 운동 기록 프로토콜](docs/exercise-recording-protocol.md)은 대화 속 종목명 매칭, 미측정값과 추정값 처리, 비공개 저장소 기록 절차를 설명합니다.
+- 앱은 공식 카탈로그를 사용하며, 유지 시간, 좌우 개별 세트, 추정 반복 횟수도 입력할 수 있습니다.
 
+## 보안과 개인정보
 
-## Security and privacy
+- 웹사이트는 공개됩니다. 비공개 `workout-data`의 기록을 읽으려면 해당 저장소에 접근 가능한 PAT가 필요합니다.
+- PAT는 기기별로 직접 입력하도록 설계합니다. 토큰을 브라우저에 저장하면 XSS나 기기 침해 시 노출될 수 있습니다.
+- fine-grained PAT 권한은 `workout-data`의 저장소 콘텐츠 읽기·쓰기로 제한합니다. 토큰 만료와 교체를 지원해야 합니다.
+- Pages 빌드 결과물, 분석 도구, 브라우저 로그, 테스트용 예시, 공개 저장소에 개인 기록, PAT, GitHub API 응답, 시크릿을 넣지 않습니다.
+- 외부 스크립트 사용을 피하고, 호환되는 범위에서 엄격한 콘텐츠 보안 정책(CSP)을 적용합니다.
+- 공개 저장소의 예시에는 합성 데이터만 사용합니다.
 
-- The public website **is not access restricted**. Without a valid PAT, visitors cannot read private workout-data content.
-- PAT entry is manual per device. Persisting the token is optional and carries XSS/device-compromise risk; there is no truly secret browser storage.
-- Fine-grained PAT: only `workout-data`, repository Contents read/write; no broad scopes. Token expiration and replacement must be supported.
-- No personal records, PATs, GitHub API responses, or secrets in Pages build output, analytics, browser logs, sample fixtures, or public repo.
-- Avoid third-party scripts; apply a restrictive Content Security Policy where compatible.
-- Private data should not be moved into the public repo even as a sample.
+## 실행 방법
 
-## Getting started
-
-Run the app from WSL using Node.js 22 and npm.
+WSL에서 Node.js 22와 npm으로 실행합니다.
 
 ```sh
 npm ci
@@ -76,16 +76,16 @@ npm run build
 npm run preview
 ```
 
-Open the URL printed by Vite under `/workout-tracker/`. Use the production preview to test the service worker. Load the app once online so it can cache the app shell. Installation on a phone requires a supported browser and an HTTPS origin.
+Vite가 출력한 주소에서 `/workout-tracker/` 경로를 엽니다. 서비스 워커는 프로덕션 미리보기에서 확인하세요. 처음에는 온라인으로 앱을 열어 정적 파일을 캐시해야 합니다. 스마트폰에서 설치하려면 PWA를 지원하는 브라우저와 HTTPS 주소가 필요합니다.
 
-Use **설정** to export a JSON backup before importing, clearing browser data, or switching devices. The importer accepts app backups (v1/v2), monthly workout JSON, and yearly InBody JSON. It validates the whole file before writing and skips conflicts with existing records. The demo uses a separate database.
+가져오기, 브라우저 데이터 삭제, 기기 변경 전에 **설정 → 내보내기**에서 JSON 백업을 저장하세요. 앱 백업(v1·v2), 월별 운동 JSON, 연별 인바디 JSON을 가져올 수 있습니다. 파일 전체를 검증한 뒤 기존 기록과 충돌하는 항목을 건너뜁니다. 데모 모드는 별도의 데이터베이스를 사용합니다.
 
-Each date has one workout session. Copying a workout adds exercises and sets with fresh IDs and resets completion. The weekly counter starts on Monday. Volume counts successful reps from completed sets with known weights, including each side separately. Estimates remain flagged in the set details.
+운동 세션은 날짜마다 하나입니다. 이전 운동을 복사하면 종목과 세트에 새 ID가 부여되고 완료 상태가 초기화됩니다. 주간 집계는 월요일부터 시작합니다. 볼륨은 중량을 아는 완료 세트의 성공 횟수를 반영하며, 좌우 운동은 양쪽을 따로 계산해 합산합니다. 추정 여부는 세트 상세에 표시됩니다.
 
-The [official exercise catalog](data/exercise-catalog.json) supplies stable keys and default rest times. Historical generic codes remain on existing records until you confirm a specific variant under **이전 종목 코드 확인**. Existing custom entries and rest preferences remain in IndexedDB.
+[공식 운동 카탈로그](data/exercise-catalog.json)는 고정 종목 키와 기본 휴식 시간을 제공합니다. 기존 기록의 포괄적인 종목 키는 **이전 종목 코드 확인**에서 구체적인 변형을 선택할 때까지 유지됩니다. 사용자 종목과 휴식 설정은 IndexedDB에 보존됩니다.
 
-The build uses the GitHub Pages base path `/workout-tracker/`. Pages deployment remains in Phase 4.
+빌드 기본 경로는 GitHub Pages용 `/workout-tracker/`입니다. 실제 Pages 배포는 4단계에서 진행합니다.
 
-## Design principles
+## 설계 원칙
 
-Keep it simple, local-first and resilient to temporary network failure. Treat GitHub as a small versioned JSON store—not a transactional database. Avoid extra infrastructure until the use case requires it.
+기록은 기기에 우선 저장해 일시적인 네트워크 장애에도 사용할 수 있게 합니다. GitHub는 버전이 관리되는 소규모 JSON 저장소로 활용하며, 여러 파일을 한 번에 갱신할 수 있다고 가정하지 않습니다. 추가 인프라는 실제 요구가 생길 때 도입합니다.

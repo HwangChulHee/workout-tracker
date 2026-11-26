@@ -1,68 +1,77 @@
-# Architecture & security
+# 아키텍처와 보안
 
-## Goals / non-goals
-- Personal, single-user strength-training log optimized for a Galaxy phone; desktop support.
-- No paid hosting, always-on backend, managed database, or third-party login.
-- Source is public; workout and body-composition records are private.
-- GitHub Pages hosts the *static app*, not the personal JSON.
-- Do not promise reliable background vibration or uninterrupted timers while the screen is locked.
+## 목표와 범위
 
-## Runtime architecture
+- Galaxy 스마트폰에 최적화한 1인용 근력 운동 기록 앱을 제공하고 데스크톱도 지원합니다.
+- 유료 호스팅, 상시 백엔드, 관리형 데이터베이스, 외부 로그인 서비스 없이 운영합니다.
+- 소스 코드는 공개하고 운동·체성분 기록은 비공개로 관리합니다.
+- GitHub Pages에는 앱의 정적 파일만 배포합니다. 개인 JSON은 비공개 저장소에 둡니다.
+- 백그라운드나 화면 잠금 중에는 타이머 진행과 진동이 브라우저 정책에 따라 제한될 수 있습니다.
+
+## 실행 구조
+
+다음은 GitHub 동기화와 배포를 도입한 뒤의 구조입니다.
+
 ```text
-GitHub Pages (public static distribution)
-       │ React/Vite PWA + service worker
+GitHub Pages (공개 정적 파일 배포)
+       │ React/Vite PWA + 서비스 워커
        ▼
-Galaxy Chrome / desktop browser
-       ├── IndexedDB: workout records, measurement records, outbox, sync metadata
-       ├── optional local PAT retention (explicit user opt-in)
+Galaxy Chrome / 데스크톱 브라우저
+       ├── IndexedDB (운동·측정 기록, 전송 대기열, 동기화 메타데이터)
+       ├── 사용자 동의 시 기기에 PAT 저장
        └── fetch HTTPS + Authorization: Bearer <PAT>
                     │
                     ▼
            GitHub REST Contents API
                     │
                     ▼
-     HwangChulHee/workout-data (PRIVATE)
+     HwangChulHee/workout-data (비공개)
 ```
 
-No Cloudflare, backend, private key in source, or GitHub Actions cross-repository token is needed. Check cross-origin browser API requests in a real Galaxy browser during Phase 2; browser extensions, network settings and API policies can still impact requests.
+이 구조에는 Cloudflare, 별도 백엔드, 소스에 포함된 비공개 키, GitHub Actions의 저장소 간 접근 토큰이 필요하지 않습니다. 2단계에서 Galaxy 브라우저로 교차 출처 API 요청을 확인합니다. 브라우저 확장 프로그램, 네트워크 설정, API 정책이 요청에 영향을 줄 수 있습니다.
 
-## Identity / credentials
-1. On first use, show a GitHub token connection form rather than falsely claiming GitHub OAuth login.
-2. User creates a **fine-grained PAT** explicitly restricted to `HwangChulHee/workout-data` with **Contents: read and write** (and automatically required metadata read permission).
-3. Validate the token by a minimally scoped request against the target repo. A successful call to `/user` alone does not establish access to the private data repo.
-4. Keep token in memory by default. Offer opt-in 'remember on this device'; stored tokens remain accessible to JavaScript in the same origin and are at risk from XSS, malicious extensions or compromised devices. Do not imply that encryption at rest with a key saved alongside the token solves this.
-5. Provide disconnect, delete locally cached records, token expiry/rotation, and clear error states. Disconnecting locally cannot revoke a PAT; instruct users to revoke it in GitHub settings.
-6. HTTPS only; never put PAT in URL, console, crash report, error text, repo, workflow or sample fixtures.
-7. Limit dependencies and third-party scripts; minimize DOM injection, avoid unsafe HTML and use an appropriate CSP (prefer HTML meta CSP where response headers cannot be configured).
-8. GitHub Pages is publicly reachable. UI gating is **not** site access control. Protect private records using repo permissions; never include records in the public build.
-9. Avoid saving gym name, coordinates or precise workout start times; GitHub commit timestamps can still reveal sync activity.
+## 인증과 자격 증명
 
-## Local-first persistence
-- Each completed input is committed to IndexedDB immediately; remote synchronization is asynchronous.
-- UI distinguishes `saved locally`, `sync pending`, `synced`, `conflict`, `authentication required`.
-- Persist a local outbox of immutable operations with stable operation IDs and entity UUIDs. Do not consider a remote write successful until GitHub confirms it.
-- If offline or PAT is expired, preserve unsynced data and offer manual retry/export.
-- Export/import JSON with schema validation. Warn before destructive local reset.
-- Cache only app shell/static assets via service worker; don't service-worker-cache authenticated API responses or tokens.
+1. 처음 연결할 때 GitHub PAT 입력 화면을 표시합니다. 인증 방식을 화면에 명확히 표시합니다.
+2. 사용자가 **fine-grained PAT**를 직접 생성합니다. 저장소는 `HwangChulHee/workout-data`로 제한하고, **Contents 읽기·쓰기**와 필수 Metadata 읽기 권한을 부여합니다.
+3. 대상 저장소에 최소 권한으로 요청해 토큰을 검증합니다. `/user`에서 성공 응답을 받아도 비공개 저장소 접근 권한은 별도로 확인해야 합니다.
+4. 기본값으로 토큰은 메모리에만 보관합니다. **이 기기에 기억하기**를 명시적으로 선택한 경우에만 저장합니다. 저장된 토큰은 동일 출처의 JavaScript에서 접근할 수 있으며 XSS, 악성 확장 프로그램, 기기 침해 시 노출될 수 있습니다. 암호화 키를 토큰과 함께 저장하면 이 위험을 해결할 수 없습니다.
+5. 연결 해제, 로컬 캐시 삭제, 토큰 만료 및 교체를 지원하고 오류 원인을 명확히 표시합니다. 브라우저에서 연결을 해제해도 PAT는 유효하므로 토큰 취소는 GitHub 설정에서 진행하도록 안내합니다.
+6. HTTPS만 사용합니다. PAT는 URL, 콘솔, 오류 메시지, 충돌 보고서, 저장소, 워크플로, 테스트용 예시에 남기지 않습니다.
+7. 의존성과 외부 스크립트를 줄이고 DOM에 안전하지 않은 HTML을 삽입하지 않습니다. 호환되는 콘텐츠 보안 정책(CSP)을 적용합니다. 응답 헤더를 설정할 수 없는 배포 환경에서는 HTML 메타 CSP를 우선 검토합니다.
+8. GitHub Pages는 공개됩니다. 화면을 가리는 방식으로는 웹사이트 접근을 제한할 수 없습니다. 비공개 기록은 저장소 권한으로 보호하고 공개 빌드에 포함하지 않습니다.
+9. 운동 시설 이름, 좌표, 정확한 운동 시작 시각은 저장하지 않습니다. 다만 GitHub 커밋 시각으로 동기화 활동이 드러날 수 있습니다.
 
-## Remote storage and sync
-- GitHub data stays in `workout-data`, recommended paths `workouts/YYYY-MM.json`, `body/YYYY.json`, and `schema.json`.
-- GitHub Contents API GET returns a file blob SHA. When updating, supply the latest SHA in PUT; newly created files omit it. Treat 409/422 concurrency errors as reload-and-reconcile cases, not unconditional overwrite.
-- For each sync: read latest remote snapshot → fold pending local operations → detect same-entity concurrent edits → create/update with SHA → acknowledge operations only on successful remote write.
-- Distinct UUID operations (e.g., adding different sets) can be merged. For *same field* edits or delete-vs-edit, retain both candidates and ask user to resolve rather than using silent last-write-wins.
-- Represent deletion with tombstones (id + revision/deletedAt) so an older offline client cannot resurrect a deleted record.
-- Concurrent read/modify/write is **not transaction-safe** across multiple files; keep each write scoped to one file and serialize sync on each device. SHA checking helps prevent accidental blind overwrites but cannot replace a DB transaction.
-- GitHub is not a real-time DB: explicit sync, occasional polling on focus, and retry/backoff. Avoid a write per timer tick, keystroke, or every screen render.
-- Do not mark "synced" when only a local IndexedDB write succeeded.
-- API permissions/quotas and CORS behavior should be validated in a deployed browser before committing to direct-client access.
+## 로컬 우선 저장
 
-## Timer and mobile behavior
-- Store a desired end timestamp rather than relying on setInterval counts; compute `max(0, endAt - Date.now())` on foreground/resume.
-- `navigator.vibrate()` may work on Galaxy/Android browsers with user activation, but is not guaranteed while backgrounded or locked. Provide visual feedback; optional sound/notification needs separate browser support assessment.
-- Never store precise end timestamps in remote public metadata; timer runtime state stays local.
+- 입력을 마치면 IndexedDB에 바로 저장합니다. 원격 동기화는 비동기로 처리하도록 설계합니다.
+- UI 상태는 기기 저장 완료, 동기화 대기, 동기화 완료, 충돌, 인증 필요로 구분합니다.
+- 전송 대기열은 변경할 수 없는 작업으로 구성하며, 작업 ID와 기록 UUID를 고정합니다. GitHub가 쓰기에 성공했다고 응답한 뒤에만 원격 저장이 완료된 것으로 처리합니다.
+- 오프라인이거나 PAT가 만료되면 미전송 데이터를 보존하고 수동 재시도와 내보내기를 제공합니다.
+- JSON 가져오기·내보내기에는 스키마 검증을 적용합니다. 로컬 데이터를 삭제하는 초기화 작업은 실행 전에 안내합니다.
+- 서비스 워커는 앱 실행에 필요한 정적 파일만 캐시합니다. 인증이 필요한 API 응답과 토큰을 캐시하지 않습니다.
 
-## Deploy
-- GitHub Pages serves only Vite `dist/` artifacts from public `workout-tracker`.
-- Use Vite base `/workout-tracker/` for project Pages, and verify PWA manifest scope/start_url/service-worker paths on the real URL.
-- Later add GitHub Actions pages build and deployment with minimal permissions. Keep PAT and private data *out of Actions*.
-- Consider access patterns: data repo remains private even if this source repo is public. Free hosting is subject to GitHub policies and limits.
+## 원격 저장과 동기화
+
+- GitHub 데이터는 `workout-data`에 저장합니다. 권장 경로는 `workouts/YYYY-MM.json`, `body/YYYY.json`, `schema.json`입니다.
+- GitHub Contents API의 GET 응답에서 파일의 blob SHA를 받습니다. 기존 파일을 갱신하는 PUT에는 최신 SHA를 포함하고, 새 파일 생성 시에는 SHA를 생략합니다. 동시 수정으로 409 또는 422가 발생하면 최신 파일을 다시 읽어 변경 사항을 조정합니다.
+- 동기화는 최신 원격 데이터 읽기 → 대기 중인 로컬 작업 적용 → 동일 기록의 동시 변경 확인 → SHA 조건으로 쓰기 → 원격 성공 확인 후 작업 완료 처리 순서로 진행합니다.
+- 서로 다른 UUID에 대한 작업은 병합할 수 있습니다. 예를 들어 두 기기에서 각각 새 세트를 추가하면 두 세트가 모두 남습니다. 동일 필드 수정이나 삭제와 수정이 맞물리면 양쪽 내용을 보존하고 사용자에게 해결을 요청합니다.
+- 삭제는 ID와 리비전 또는 `deletedAt`을 담은 삭제 표식(tombstone)으로 남깁니다. 오래 오프라인이었던 기기가 삭제된 기록을 다시 생성하는 일을 방지합니다.
+- GitHub에서 여러 파일에 걸친 읽기·수정·쓰기는 하나의 트랜잭션으로 처리할 수 없습니다. 각 쓰기는 파일 하나로 제한하고, 기기 내 동기화는 순서대로 실행합니다. SHA 검사는 이전 버전을 덮어쓰는 일을 막는 데 사용합니다.
+- 수동 동기화, 앱에 다시 초점이 맞춰질 때의 간헐적 조회, 지연 시간을 늘리는 재시도를 사용합니다. 타이머가 갱신되거나 키를 입력하거나 화면이 렌더링될 때마다 원격 쓰기를 실행하지 않습니다.
+- 로컬 IndexedDB 쓰기만 성공했다면 동기화 완료로 표시하지 않습니다.
+- 브라우저의 GitHub API 직접 접근 방식을 확정하기 전에 배포 환경에서 API 권한·사용량 제한과 CORS 동작을 확인합니다.
+
+## 타이머와 모바일 동작
+
+- 종료 예정 시각을 저장합니다. 앱이 화면에 다시 표시되거나 재개될 때 `max(0, endAt - Date.now())`로 남은 시간을 계산합니다.
+- Galaxy와 Android 브라우저에서는 사용자 조작 후 `navigator.vibrate()`가 동작할 수 있습니다. 백그라운드나 잠금 화면에서의 진동은 보장하지 않습니다. 화면에 종료 상태를 표시하고, 소리나 알림을 추가하려면 브라우저 지원을 별도로 확인합니다.
+- 타이머 실행 상태는 기기에 보관합니다. 정확한 종료 시각은 공개 원격 메타데이터에 포함하지 않습니다.
+
+## 배포
+
+- GitHub Pages에는 공개 `workout-tracker`의 Vite `dist/` 정적 결과물만 배포합니다.
+- 프로젝트 Pages의 Vite 기본 경로는 `/workout-tracker/`입니다. 실제 URL에서 PWA 매니페스트의 범위와 `start_url`, 서비스 워커 경로를 확인합니다.
+- 이후 GitHub Actions에 최소 권한으로 Pages 빌드와 배포를 구성합니다. PAT와 비공개 데이터는 Actions에 넣지 않습니다.
+- 소스 저장소를 공개해도 데이터 저장소는 비공개로 유지합니다. 무료 호스팅은 GitHub의 정책과 사용량 제한을 따릅니다.
