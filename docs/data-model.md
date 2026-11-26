@@ -84,7 +84,7 @@ Values above are **fictional/example entries for schema illustration**; no body 
 
 ## Exercise ID registry and ChatGPT ingestion
 
-See [exercise catalog](../data/exercise-catalog.json) and [GPT recording protocol](exercise-recording-protocol.md). A workout exercise instance's `exerciseKey` must equal a catalog `exercises[].id`; `id` on an instance or set is a separate UUID. The catalog is versioned independently of private workout data. Keep equipment/variation-specific IDs separate and preserve ambiguity rather than making guesses. The current React local model does **not** yet support all optional fields used by the November 26 remote baseline (e.g. duration, unilateral or estimated reps); UI/import compatibility work is required before syncing those records.
+See [exercise catalog](../data/exercise-catalog.json) and [GPT recording protocol](exercise-recording-protocol.md). An official exercise instance uses the catalog `exercises[].id` as `exerciseKey`. Custom catalog keys and historical legacy keys can also appear. Workout, exercise instance, and set IDs remain separate UUIDs. The catalog is versioned independently of workout data.
 
 ## InBody CSV import / extended measurement contract
 
@@ -92,4 +92,13 @@ The private `workout-data/body/YYYY.json` supports the core fields shown above *
 
 Optional fields already found in private data: `device`, `source`, `measuredAtLocal`, `bmi`, `basalMetabolicRateKcal`, `inbodyScore`, `rightArmMuscleKg`, `leftArmMuscleKg`, `trunkMuscleKg`, `rightLegMuscleKg`, `leftLegMuscleKg`, `rightArmBodyFatKg`, `leftArmBodyFatKg`, `trunkBodyFatKg`, `rightLegBodyFatKg`, `leftLegBodyFatKg`, `waistHipRatio`, `visceralFatLevel`, `totalBodyWaterL`, `proteinKg`, `mineralKg`, `smiKgPerM2`, and `missingFields` (names of CSV measurements unavailable/marked '-'). Do not infer unreported values; preserve numeric zero when actually reported. `measuredAtLocal` is a naive timestamp transcribed from the measurement source, not a globally comparable UTC instant.
 
-The current app's `Measurement` model, Dexie schema and JSON backup/import are **not yet fully compatible** with this expanded private format: they must preserve extra fields without dropping them during import, editing, synchronization, export or migration. Maintain stable IDs and independent revisions. Do not treat the example body measurements in this public document as real user data.
+The app models these fields and preserves additional per-record JSON fields on import, edit, and export. A missing core metric becomes `null`. A missing optional metric may remain omitted. The app sorts and charts by `date` and retains `measuredAtLocal` as source information. Use `measurementConditions` for the local condition note.
+
+## Extended sets and local backups
+
+- `measurementType` controls set entry. The supported types are `weight-reps`, `reps`, `duration`, and `unilateral-weight-reps`.
+- `completed` means an attempt is recorded. Optional `successful` describes its result. A monthly source set with omitted `completed` is treated as recorded. Missing weight and reps become `null`.
+- `reps`, `leftReps`, and `rightReps` hold successful counts. `failedAttemptRep`, `leftFailedAttemptRep`, and `rightFailedAttemptRep` mark failed positions separately. The volume uses completed sets with a recorded weight and successful count for each side. An explicit side weight of `null` indicates a missing value. If the side weight was omitted, the shared `weightKg` can apply.
+- `durationSeconds`, `restSeconds`, `repsEstimated`, side-specific repetition estimate flags, `durationEstimated`, `restSecondsEstimated`, `formUnstable`, and `notes` keep source details separate from derived totals.
+- Dexie v2 adds storage for source-file metadata. Existing tables and record IDs are retained. App backup v2 contains `sessions`, `measurements`, `catalog`, and `sources`. The importer accepts app backup v1 and the documented monthly and yearly v1 containers. Source metadata includes the original period and any tombstones. Tombstones are retained for round-tripping and have no deletion effect during local import.
+- Import validates before an additive transaction. It skips workout dates and IDs already present. Measurements are also matched by date and local measurement time when available, or by date, device, and measurements when time is missing. The local export is usable as a pre-import backup.

@@ -1,14 +1,36 @@
+import { exerciseMeasurementType } from './catalog'
+
+export type MeasurementType = 'weight-reps' | 'reps' | 'duration' | 'unilateral-weight-reps'
+
 export interface SetEntry {
   id: string
-  weightKg: number
-  reps: number
+  weightKg: number | null
+  reps: number | null
   completed: boolean
+  successful?: boolean | null
+  durationSeconds?: number | null
+  leftWeightKg?: number | null
+  rightWeightKg?: number | null
+  leftReps?: number | null
+  rightReps?: number | null
+  restSeconds?: number | null
+  failedAttemptRep?: number | null
+  leftFailedAttemptRep?: number | null
+  rightFailedAttemptRep?: number | null
+  repsEstimated?: boolean
+  leftRepsEstimated?: boolean
+  rightRepsEstimated?: boolean
+  durationEstimated?: boolean
+  restSecondsEstimated?: boolean
+  formUnstable?: boolean
+  notes?: string | null
 }
 export interface Exercise {
   id: string
   exerciseKey: string
   name: string
-  restSeconds: number
+  restSeconds: number | null
+  measurementType?: MeasurementType
   sets: SetEntry[]
 }
 export interface Session {
@@ -28,27 +50,54 @@ export interface Measurement {
   heightCm: number | null
   notes: string | null
   revision: number
+  device?: string | null
+  source?: JsonValue
+  measuredAtLocal?: string | null
+  measurementConditions?: string | null
+  missingFields?: string[] | null
+  bmi?: number | null
+  basalMetabolicRateKcal?: number | null
+  inbodyScore?: number | null
+  rightArmMuscleKg?: number | null
+  leftArmMuscleKg?: number | null
+  trunkMuscleKg?: number | null
+  rightLegMuscleKg?: number | null
+  leftLegMuscleKg?: number | null
+  rightArmBodyFatKg?: number | null
+  leftArmBodyFatKg?: number | null
+  trunkBodyFatKg?: number | null
+  rightLegBodyFatKg?: number | null
+  leftLegBodyFatKg?: number | null
+  waistHipRatio?: number | null
+  visceralFatLevel?: number | null
+  totalBodyWaterL?: number | null
+  proteinKg?: number | null
+  mineralKg?: number | null
+  smiKgPerM2?: number | null
 }
+export type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue }
+
 export interface CatalogEntry {
   id: string
   name: string
   restSeconds: number
+  nameEn?: string
+  aliases?: string[]
+  equipment?: string
+  modifiers?: string[]
+  measurementType?: MeasurementType
+}
+export interface ImportSource {
+  id: string
+  metadata: Record<string, JsonValue>
 }
 export interface Backup {
-  schemaVersion: 1
+  schemaVersion: 2
   sessions: Session[]
   measurements: Measurement[]
   catalog: CatalogEntry[]
+  sources: ImportSource[]
 }
-
-export const catalogDefaults: CatalogEntry[] = [
-  { id: 'bench-press', name: '벤치프레스', restSeconds: 120 },
-  { id: 'squat', name: '스쿼트', restSeconds: 180 },
-  { id: 'deadlift', name: '데드리프트', restSeconds: 180 },
-  { id: 'lat-pulldown', name: '랫풀다운', restSeconds: 90 },
-  { id: 'overhead-press', name: '숄더프레스', restSeconds: 90 },
-  { id: 'seated-row', name: '시티드 로우', restSeconds: 90 },
-]
 
 export function localDate(date = new Date()) {
   return [date.getFullYear(), date.getMonth() + 1, date.getDate()]
@@ -62,7 +111,14 @@ export function isDate(value: unknown): value is string {
 }
 
 export function newSet(previous?: SetEntry): SetEntry {
-  return { id: crypto.randomUUID(), weightKg: previous?.weightKg ?? 0, reps: previous?.reps ?? 0, completed: false }
+  return {
+    id: crypto.randomUUID(), weightKg: previous?.weightKg ?? null, reps: previous?.reps ?? null, completed: false,
+    durationSeconds: previous?.durationSeconds ?? null, durationEstimated: previous?.durationEstimated ?? false,
+    leftWeightKg: previous?.leftWeightKg, rightWeightKg: previous?.rightWeightKg,
+    leftReps: previous?.leftReps ?? null, rightReps: previous?.rightReps ?? null,
+    repsEstimated: previous?.repsEstimated ?? false, leftRepsEstimated: previous?.leftRepsEstimated ?? false,
+    rightRepsEstimated: previous?.rightRepsEstimated ?? false,
+  }
 }
 
 export function copyExercises(exercises: Exercise[]): Exercise[] {
@@ -73,11 +129,29 @@ export function copyExercises(exercises: Exercise[]): Exercise[] {
 
 export function sessionRecordIds(session: Session) {
   return [session.id, ...session.exercises.flatMap((exercise) => [exercise.id, ...exercise.sets.map((set) => set.id)])]
+    .map((id) => id.toLowerCase())
+}
+
+export function sideWeight(set: SetEntry, side: 'left' | 'right') {
+  const weight = side === 'left' ? set.leftWeightKg : set.rightWeightKg
+  return weight === undefined ? set.weightKg : weight
 }
 
 export function sessionVolume(session: Session) {
-  return session.exercises.flatMap((exercise) => exercise.sets)
-    .reduce((volume, set) => volume + (set.completed ? set.weightKg * set.reps : 0), 0)
+  return session.exercises.reduce((volume, exercise) => {
+    const type = exerciseMeasurementType(exercise)
+    if (type === 'duration' || type === 'reps') return volume
+    for (const set of exercise.sets) {
+      if (!set.completed) continue
+      if (type === 'unilateral-weight-reps') {
+        volume += (sideWeight(set, 'left') ?? 0) * (set.leftReps ?? 0)
+          + (sideWeight(set, 'right') ?? 0) * (set.rightReps ?? 0)
+      } else {
+        volume += (set.weightKg ?? 0) * (set.reps ?? 0)
+      }
+    }
+    return volume
+  }, 0)
 }
 
 export function remainingSeconds(endAt: number, now: number) {

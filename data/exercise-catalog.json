@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": "1.0.0",
+  "catalogVersion": "1.0.1",
   "namespace": "workout-tracker",
   "description": "Stable app-owned exercise identifiers; not external standard IDs.",
   "exercises": [
@@ -73,6 +73,7 @@
       "aliases": [
         "가슴 패드 로우",
         "가슴패드 로우 머신",
+        "가슴 패드 수평 로우",
         "가슴 지지 수평 로우",
         "수평 로우 머신"
       ],

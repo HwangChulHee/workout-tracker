@@ -33,12 +33,9 @@ The authoritative **public** catalog is [data/exercise-catalog.json](../data/exe
 
 ## Compatibility with current React app
 
-The existing `src/model.ts` has a **separate preliminary catalogDefaults array** with generic IDs (e.g. `squat`, `seated-row`) and numeric-only set fields. This file is **not yet integrated** with the richer catalog. During the next app implementation step:
-- Load/import this JSON as the sole built-in exercise list; maintain user's custom catalog entries and migration aliases.
-- Migrate ambiguous old IDs with explicit user confirmation rather than guessing `squat` → one of two squat variants.
-- Extend set model/form/import validators for nullable reps/weights, duration holds, unilateral reps, estimates, failed reps and notes.
-- Preserve backwards compatibility with v1 local backup and the first private GitHub workout JSON.
-- Add tests for Korean aliases, ambiguous variant avoidance, stable IDs, duplicate-date writes, unknown inputs and volume math.
+The app loads this JSON as its built-in catalog. Stored custom entries and rest preferences remain available. Historical generic keys such as `squat` and `seated-row` remain on their records until the user confirms an official variant. Confirmation updates the exercise key and its label without replacing the exercise instance or set UUIDs.
+
+The app supports nullable weights and reps, duration, unilateral sets, estimate flags, failed attempts, and notes. Settings can import monthly workout JSON and v1 local backups. App backups export as v2. The conversational remote-write steps above describe a separate workflow.
 
 ## Catalog evolution
 

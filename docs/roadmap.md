@@ -1,6 +1,6 @@
 # Implementation roadmap
 
-Use the following phases as independent, verifiable Codex tasks. Documentation-only is the current state.
+Phase 1 is implemented, including the official exercise catalog, extended set and InBody models, and local JSON exchange.
 
 ## Phase 1 — Mobile-first UI and local functionality
 - Scaffold Vite/React/TypeScript and set the GitHub Pages base path.

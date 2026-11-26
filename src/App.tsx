@@ -23,7 +23,8 @@ function BackupSettings({ repo, run, demo, toggleDemo }: {
   return <>
     {!demo && <section className="panel stack">
       <h2>JSON 백업</h2>
-      <p className="muted">가져올 때 기존 날짜의 운동과 같은 ID의 기록은 건너뛰어요.</p>
+      <p className="muted">운동 월별 JSON, 인바디 연별 JSON, 앱 백업을 가져올 수 있어요. 기존 기록은 유지돼요.</p>
+      <p className="muted">가져오기 전에 내보내기로 현재 기록을 백업할 수 있어요.</p>
       <div className="actions">
         <button className="primary" onClick={() => void run(async () => {
           const data = await repo.exportBackup()

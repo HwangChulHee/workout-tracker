@@ -16,11 +16,11 @@ The app shell is public. Phase 1 stores personal records in IndexedDB on the dev
 ## Core features
 
 - Workout sessions organized by calendar date (no gym location or precise visit time collected)
-- Exercise selection with sets, weight (kg), reps, completion, and rest duration
+- Korean/English exercise catalog search, including aliases, equipment, and movement variations. Set entry supports weight and reps, duration, and left/right tracking.
 - Rest countdown with vibration on supported Android devices (best-effort only while active)
 - Previous-session recall and quick set duplication
 - Workout history and trends (frequency, sets, volume, exercise progress)
-- Body measurements: weight, skeletal muscle mass, body fat mass/percentage and optional height
+- InBody records and trends with device, measurement conditions, and optional segmental readings
 - Offline-first local saving and JSON export/import. Manual and automatic GitHub sync are planned.
 
 ## Technology
@@ -78,9 +78,11 @@ npm run preview
 
 Open the URL printed by Vite under `/workout-tracker/`. Use the production preview to test the service worker. Load the app once online so it can cache the app shell. Installation on a phone requires a supported browser and an HTTPS origin.
 
-Use **설정** to export a JSON backup before clearing browser data or switching devices. Import validates the entire file before writing and skips workouts on existing dates and records with conflicting IDs. The demo uses a separate database and its settings hide the backup controls.
+Use **설정** to export a JSON backup before importing, clearing browser data, or switching devices. The importer accepts app backups (v1/v2), monthly workout JSON, and yearly InBody JSON. It validates the whole file before writing and skips conflicts with existing records. The demo uses a separate database.
 
-Each date has one workout session. Copying a workout adds exercises and sets with fresh IDs, retaining weights and reps and resetting completion. The weekly counter starts on Monday. Volume and highest-weight trends use completed sets.
+Each date has one workout session. Copying a workout adds exercises and sets with fresh IDs and resets completion. The weekly counter starts on Monday. Volume counts successful reps from completed sets with known weights, including each side separately. Estimates remain flagged in the set details.
+
+The [official exercise catalog](data/exercise-catalog.json) supplies stable keys and default rest times. Historical generic codes remain on existing records until you confirm a specific variant under **이전 종목 코드 확인**. Existing custom entries and rest preferences remain in IndexedDB.
 
 The build uses the GitHub Pages base path `/workout-tracker/`. Pages deployment remains in Phase 4.
 
