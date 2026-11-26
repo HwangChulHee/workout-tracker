@@ -2,7 +2,7 @@
 
 A mobile-first, installable workout log for tracking strength training, rest intervals, and body-composition trends.
 
-> **Status:** Planning / documentation only. The app, GitHub sync, and Pages deployment are not implemented yet.
+> **Status:** Phase 1 is implemented. The app stores workout and body records locally and can run offline after its first successful load. GitHub sync and the Pages deployment workflow are future phases.
 
 ## Repositories
 
@@ -11,7 +11,7 @@ A mobile-first, installable workout log for tracking strength training, rest int
 | [workout-tracker](https://github.com/HwangChulHee/workout-tracker) | Public | React PWA source, documentation, GitHub Pages |
 | [workout-data](https://github.com/HwangChulHee/workout-data) | Private | Personal workout and body-composition JSON |
 
-The app shell is public. **Personal records remain private**, and require a user-supplied, narrowly scoped GitHub fine-grained personal access token (PAT). The token must never be committed, bundled into frontend code, included in URLs, or placed in GitHub Actions secrets for this design.
+The app shell is public. Phase 1 stores personal records in IndexedDB on the device. The planned remote sync will require a user-supplied, narrowly scoped GitHub fine-grained personal access token (PAT). The token must never be committed, bundled into frontend code, included in URLs, or placed in GitHub Actions secrets for this design.
 
 ## Core features
 
@@ -21,11 +21,11 @@ The app shell is public. **Personal records remain private**, and require a user
 - Previous-session recall and quick set duplication
 - Workout history and trends (frequency, sets, volume, exercise progress)
 - Body measurements: weight, skeletal muscle mass, body fat mass/percentage and optional height
-- Offline-first local saving, manual/automatic GitHub sync, and JSON export/import
+- Offline-first local saving and JSON export/import. Manual and automatic GitHub sync are planned.
 
 ## Technology
 
-React + TypeScript + Vite; PWA with service worker; IndexedDB (Dexie); GitHub REST Contents API; GitHub Pages using Actions. **No always-on server or database service.** Intended operating cost: 0 KRW/month within free-tier limits.
+React, TypeScript, Vite, Tailwind CSS, Dexie, Lucide React, Recharts, Vitest, and a PWA service worker. The deployment plan uses GitHub Pages without an always-on server or database service. The intended operating cost is 0 KRW/month within free-tier limits.
 
 ```text
 Galaxy / desktop browser
@@ -57,7 +57,25 @@ See [architecture](docs/architecture.md), [data model](docs/data-model.md), and 
 
 ## Getting started
 
-No app scaffold exists yet. Start with Phase 1 in [docs/roadmap.md](docs/roadmap.md). Pages must be configured after the build workflow is implemented; **this README does not mean the app is deployed**.
+Run the app from WSL using Node.js 22 and npm.
+
+```sh
+npm ci
+npm run dev
+npm run typecheck
+npm run lint
+npm test
+npm run build
+npm run preview
+```
+
+Open the URL printed by Vite under `/workout-tracker/`. Use the production preview to test the service worker. Load the app once online so it can cache the app shell. Installation on a phone requires a supported browser and an HTTPS origin.
+
+Use **설정** to export a JSON backup before clearing browser data or switching devices. Import validates the entire file before writing and skips workouts on existing dates and records with conflicting IDs. The demo uses a separate database and its settings hide the backup controls.
+
+Each date has one workout session. Copying a workout adds exercises and sets with fresh IDs, retaining weights and reps and resetting completion. The weekly counter starts on Monday. Volume and highest-weight trends use completed sets.
+
+The build uses the GitHub Pages base path `/workout-tracker/`. Pages deployment remains in Phase 4.
 
 ## Design principles
 
