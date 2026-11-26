@@ -1,0 +1,357 @@
+{
+  "schemaVersion": 1,
+  "catalogVersion": "1.0.0",
+  "namespace": "workout-tracker",
+  "description": "Stable app-owned exercise identifiers; not external standard IDs.",
+  "exercises": [
+    {
+      "id": "machine-chest-press",
+      "nameKo": "체스트프레스 머신",
+      "nameEn": "Machine Chest Press",
+      "aliases": [
+        "체스트프레스",
+        "체프",
+        "체스트 프레스 머신"
+      ],
+      "primaryMuscles": [
+        "chest"
+      ],
+      "equipment": "machine",
+      "measurementType": "weight-reps",
+      "defaultRestSeconds": 90,
+      "modifiers": [
+        "machine",
+        "seated"
+      ],
+      "externalIds": {}
+    },
+    {
+      "id": "dead-hang",
+      "nameKo": "매달리기",
+      "nameEn": "Dead Hang",
+      "aliases": [
+        "데드행",
+        "철봉 매달리기",
+        "dead hang"
+      ],
+      "primaryMuscles": [
+        "forearms",
+        "grip"
+      ],
+      "equipment": "pull-up-bar",
+      "measurementType": "duration",
+      "defaultRestSeconds": 60,
+      "modifiers": [],
+      "externalIds": {}
+    },
+    {
+      "id": "band-assisted-pull-up",
+      "nameKo": "밴드 보조 풀업",
+      "nameEn": "Band-assisted Pull-up",
+      "aliases": [
+        "밴드 풀업",
+        "밴드 턱걸이",
+        "밴드 보조 턱걸이"
+      ],
+      "primaryMuscles": [
+        "lats",
+        "upper-back",
+        "biceps"
+      ],
+      "equipment": "pull-up-bar-band",
+      "measurementType": "reps",
+      "defaultRestSeconds": 90,
+      "modifiers": [
+        "band-assisted"
+      ],
+      "externalIds": {}
+    },
+    {
+      "id": "chest-supported-horizontal-row",
+      "nameKo": "가슴 패드 수평 로우 머신",
+      "nameEn": "Chest-supported Horizontal Row Machine",
+      "aliases": [
+        "가슴 패드 로우",
+        "가슴패드 로우 머신",
+        "가슴 지지 수평 로우",
+        "수평 로우 머신"
+      ],
+      "primaryMuscles": [
+        "upper-back",
+        "lats"
+      ],
+      "equipment": "chest-supported-row-machine",
+      "measurementType": "weight-reps",
+      "defaultRestSeconds": 90,
+      "modifiers": [
+        "chest-supported",
+        "horizontal"
+      ],
+      "externalIds": {}
+    },
+    {
+      "id": "reverse-pec-deck-fly",
+      "nameKo": "리버스 펙덱 플라이",
+      "nameEn": "Reverse Pec Deck Fly",
+      "aliases": [
+        "리버스펙덱",
+        "리버스 펙덱",
+        "후면 어깨 펙덱",
+        "리어 델트 머신"
+      ],
+      "primaryMuscles": [
+        "rear-deltoids"
+      ],
+      "equipment": "reverse-pec-deck",
+      "measurementType": "weight-reps",
+      "defaultRestSeconds": 90,
+      "modifiers": [],
+      "externalIds": {}
+    },
+    {
+      "id": "single-arm-cable-lateral-raise",
+      "nameKo": "한팔 케이블 사이드 레터럴 레이즈",
+      "nameEn": "Single-arm Cable Lateral Raise",
+      "aliases": [
+        "케이블 사레레",
+        "케이블 사이드 레터럴 레이즈",
+        "한팔 케이블 사레레",
+        "케이블 측면 레이즈"
+      ],
+      "primaryMuscles": [
+        "lateral-deltoids"
+      ],
+      "equipment": "cable",
+      "measurementType": "unilateral-weight-reps",
+      "defaultRestSeconds": 90,
+      "modifiers": [
+        "one-arm"
+      ],
+      "externalIds": {}
+    },
+    {
+      "id": "cable-overhead-triceps-extension",
+      "nameKo": "케이블 오버헤드 트라이셉스 익스텐션",
+      "nameEn": "Cable Overhead Triceps Extension",
+      "aliases": [
+        "케이블 오버헤드 삼두 익스텐션",
+        "오버헤드 트라이셉스 익스텐션 케이블",
+        "케이블 오버헤드 트라이셉스",
+        "케이블 오버헤드 트라이셉스 익스텍션",
+        "오트익"
+      ],
+      "primaryMuscles": [
+        "triceps"
+      ],
+      "equipment": "cable",
+      "measurementType": "weight-reps",
+      "defaultRestSeconds": 90,
+      "modifiers": [
+        "overhead"
+      ],
+      "externalIds": {}
+    },
+    {
+      "id": "barbell-bench-press",
+      "nameKo": "바벨 벤치프레스",
+      "nameEn": "Barbell Bench Press",
+      "aliases": [
+        "바벨 벤치",
+        "벤치프레스",
+        "벤치 프레스"
+      ],
+      "primaryMuscles": [
+        "chest",
+        "triceps",
+        "front-deltoids"
+      ],
+      "equipment": "barbell",
+      "measurementType": "weight-reps",
+      "defaultRestSeconds": 120,
+      "modifiers": [],
+      "externalIds": {}
+    },
+    {
+      "id": "barbell-back-squat",
+      "nameKo": "바벨 백스쿼트",
+      "nameEn": "Barbell Back Squat",
+      "aliases": [
+        "바벨 스쿼트",
+        "백스쿼트",
+        "스쿼트 바벨"
+      ],
+      "primaryMuscles": [
+        "quadriceps",
+        "glutes"
+      ],
+      "equipment": "barbell",
+      "measurementType": "weight-reps",
+      "defaultRestSeconds": 180,
+      "modifiers": [],
+      "externalIds": {}
+    },
+    {
+      "id": "smith-machine-squat",
+      "nameKo": "스미스머신 스쿼트",
+      "nameEn": "Smith Machine Squat",
+      "aliases": [
+        "스미스 스쿼트",
+        "스미스머신 스쿼트",
+        "스미스 머신 스쿼트"
+      ],
+      "primaryMuscles": [
+        "quadriceps",
+        "glutes"
+      ],
+      "equipment": "smith-machine",
+      "measurementType": "weight-reps",
+      "defaultRestSeconds": 180,
+      "modifiers": [],
+      "externalIds": {}
+    },
+    {
+      "id": "barbell-deadlift",
+      "nameKo": "바벨 데드리프트",
+      "nameEn": "Barbell Deadlift",
+      "aliases": [
+        "바벨 데드리프트",
+        "컨벤셔널 데드리프트"
+      ],
+      "primaryMuscles": [
+        "posterior-chain",
+        "glutes"
+      ],
+      "equipment": "barbell",
+      "measurementType": "weight-reps",
+      "defaultRestSeconds": 180,
+      "modifiers": [],
+      "externalIds": {}
+    },
+    {
+      "id": "lat-pulldown",
+      "nameKo": "랫풀다운",
+      "nameEn": "Lat Pulldown",
+      "aliases": [
+        "랫 풀 다운",
+        "랫 풀다운",
+        "lat pulldown"
+      ],
+      "primaryMuscles": [
+        "lats",
+        "upper-back"
+      ],
+      "equipment": "lat-pulldown-machine",
+      "measurementType": "weight-reps",
+      "defaultRestSeconds": 90,
+      "modifiers": [],
+      "externalIds": {}
+    },
+    {
+      "id": "machine-shoulder-press",
+      "nameKo": "숄더프레스 머신",
+      "nameEn": "Machine Shoulder Press",
+      "aliases": [
+        "머신 숄더프레스",
+        "숄더프레스 머신"
+      ],
+      "primaryMuscles": [
+        "deltoids",
+        "triceps"
+      ],
+      "equipment": "shoulder-press-machine",
+      "measurementType": "weight-reps",
+      "defaultRestSeconds": 90,
+      "modifiers": [],
+      "externalIds": {}
+    },
+    {
+      "id": "barbell-overhead-press",
+      "nameKo": "바벨 오버헤드 프레스",
+      "nameEn": "Barbell Overhead Press",
+      "aliases": [
+        "바벨 밀리터리프레스",
+        "바벨 밀리터리 프레스",
+        "바벨 오버헤드 프레스"
+      ],
+      "primaryMuscles": [
+        "deltoids",
+        "triceps"
+      ],
+      "equipment": "barbell",
+      "measurementType": "weight-reps",
+      "defaultRestSeconds": 120,
+      "modifiers": [],
+      "externalIds": {}
+    },
+    {
+      "id": "seated-cable-row",
+      "nameKo": "시티드 케이블 로우",
+      "nameEn": "Seated Cable Row",
+      "aliases": [
+        "케이블 로우",
+        "시티드 케이블 로우"
+      ],
+      "primaryMuscles": [
+        "upper-back",
+        "lats"
+      ],
+      "equipment": "cable",
+      "measurementType": "weight-reps",
+      "defaultRestSeconds": 90,
+      "modifiers": [],
+      "externalIds": {}
+    },
+    {
+      "id": "bodyweight-pull-up",
+      "nameKo": "맨몸 풀업",
+      "nameEn": "Bodyweight Pull-up",
+      "aliases": [
+        "맨몸 턱걸이",
+        "맨몸 풀업",
+        "무보조 풀업"
+      ],
+      "primaryMuscles": [
+        "lats",
+        "upper-back",
+        "biceps"
+      ],
+      "equipment": "pull-up-bar",
+      "measurementType": "reps",
+      "defaultRestSeconds": 120,
+      "modifiers": [],
+      "externalIds": {}
+    }
+  ],
+  "ambiguousTerms": {
+    "로우": [
+      "chest-supported-horizontal-row",
+      "seated-cable-row"
+    ],
+    "로우 머신": [
+      "chest-supported-horizontal-row",
+      "seated-cable-row"
+    ],
+    "스쿼트": [
+      "barbell-back-squat",
+      "smith-machine-squat"
+    ],
+    "숄더프레스": [
+      "machine-shoulder-press",
+      "barbell-overhead-press"
+    ],
+    "풀업": [
+      "bodyweight-pull-up",
+      "band-assisted-pull-up"
+    ],
+    "턱걸이": [
+      "bodyweight-pull-up",
+      "band-assisted-pull-up"
+    ],
+    "사레레": [
+      "single-arm-cable-lateral-raise"
+    ],
+    "삼두 익스텐션": [
+      "cable-overhead-triceps-extension"
+    ]
+  }
+}
