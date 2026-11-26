@@ -85,3 +85,11 @@ Values above are **fictional/example entries for schema illustration**; no body 
 ## Exercise ID registry and ChatGPT ingestion
 
 See [exercise catalog](../data/exercise-catalog.json) and [GPT recording protocol](exercise-recording-protocol.md). A workout exercise instance's `exerciseKey` must equal a catalog `exercises[].id`; `id` on an instance or set is a separate UUID. The catalog is versioned independently of private workout data. Keep equipment/variation-specific IDs separate and preserve ambiguity rather than making guesses. The current React local model does **not** yet support all optional fields used by the November 26 remote baseline (e.g. duration, unilateral or estimated reps); UI/import compatibility work is required before syncing those records.
+
+## InBody CSV import / extended measurement contract
+
+The private `workout-data/body/YYYY.json` supports the core fields shown above **plus optional device-specific measurements**. A real InBody 370S CSV may contain multiple historical rows; always use the date encoded in each measurement row, **not** the CSV filename's date. For example, `InBody-20261126.csv` imported measurements dated November 5, 14 and 22, 2026; it contains no November 26 measurement.
+
+Optional fields already found in private data: `device`, `source`, `measuredAtLocal`, `bmi`, `basalMetabolicRateKcal`, `inbodyScore`, `rightArmMuscleKg`, `leftArmMuscleKg`, `trunkMuscleKg`, `rightLegMuscleKg`, `leftLegMuscleKg`, `rightArmBodyFatKg`, `leftArmBodyFatKg`, `trunkBodyFatKg`, `rightLegBodyFatKg`, `leftLegBodyFatKg`, `waistHipRatio`, `visceralFatLevel`, `totalBodyWaterL`, `proteinKg`, `mineralKg`, `smiKgPerM2`, and `missingFields` (names of CSV measurements unavailable/marked '-'). Do not infer unreported values; preserve numeric zero when actually reported. `measuredAtLocal` is a naive timestamp transcribed from the measurement source, not a globally comparable UTC instant.
+
+The current app's `Measurement` model, Dexie schema and JSON backup/import are **not yet fully compatible** with this expanded private format: they must preserve extra fields without dropping them during import, editing, synchronization, export or migration. Maintain stable IDs and independent revisions. Do not treat the example body measurements in this public document as real user data.
