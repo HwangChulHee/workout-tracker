@@ -2,7 +2,7 @@
 
 근력 운동, 세트 사이 휴식, 체성분 변화를 기록하는 모바일 우선 앱입니다. 지원하는 브라우저에서 홈 화면에 설치할 수 있습니다.
 
-> **현재 상태** — 1단계 구현을 완료했습니다. 운동과 신체 기록은 기기에 저장되며, 처음 온라인에서 앱을 불러온 뒤에는 오프라인에서도 사용할 수 있습니다. GitHub 동기화와 Pages 배포 워크플로는 이후 단계에서 구현합니다.
+> **현재 상태** — 운동·인바디 기록, 오프라인 사용, 비공개 GitHub 동기화, Pages 자동 배포 워크플로를 제공합니다. [배포 주소](https://hwangchulhee.github.io/workout-tracker/) · [동기화와 배포 안내](docs/github-sync.md)
 
 ## 저장소
 
@@ -11,7 +11,7 @@
 | [workout-tracker](https://github.com/HwangChulHee/workout-tracker) | 공개 | React PWA 소스, 문서, GitHub Pages |
 | [workout-data](https://github.com/HwangChulHee/workout-data) | 비공개 | 개인 운동과 체성분 기록 JSON |
 
-앱의 정적 파일은 공개되며, 1단계의 개인 기록은 기기 내 IndexedDB에 저장됩니다. 향후 원격 동기화에서는 사용자가 권한을 제한한 GitHub 개인 액세스 토큰(fine-grained PAT)을 직접 입력합니다. 토큰을 커밋하거나 프런트엔드 번들, URL, GitHub Actions 시크릿에 넣지 않습니다.
+앱의 정적 파일은 공개되며, 개인 기록은 기기 내 IndexedDB에 먼저 저장됩니다. 원격 동기화를 사용하려면 권한을 제한한 GitHub 개인 액세스 토큰(fine-grained PAT)을 앱에 직접 입력합니다. 토큰을 커밋하거나 프런트엔드 번들, URL, GitHub Actions 시크릿에 넣지 않습니다.
 
 ## 주요 기능
 
@@ -22,7 +22,7 @@
 - 이전 운동 불러오기와 세트 복제
 - 운동 이력과 빈도, 세트 수, 볼륨, 종목별 변화 확인
 - 인바디 기록과 추세 그래프, 측정 장비·조건, 선택적 부위별 수치
-- 오프라인 우선 로컬 저장과 JSON 내보내기·가져오기. 수동·자동 GitHub 동기화는 계획 단계입니다.
+- 오프라인 우선 로컬 저장, JSON 내보내기·가져오기, 수동·자동 GitHub 동기화와 충돌 해결
 
 ## 기술 스택
 
@@ -31,13 +31,13 @@ React, TypeScript, Vite, Tailwind CSS, Dexie, Lucide React, Recharts, Vitest와 
 ```text
 Galaxy / 데스크톱 브라우저
     ├── React PWA + IndexedDB (오프라인 우선)
-    ├── 기기에서 직접 입력한 GitHub fine-grained PAT (동기화 도입 후)
+    ├── 기기에서 직접 입력한 GitHub fine-grained PAT (선택)
     └── HTTPS → GitHub REST API → workout-data (비공개)
 
 GitHub Pages ← workout-tracker의 정적 빌드 결과물 (공개)
 ```
 
-## 개발 계획
+## 구현 범위
 
 1. **화면과 로컬 데이터** — 모바일 우선 반응형 화면, 종목과 세트, 휴식 타이머, Dexie, 데모 모드
 2. **GitHub 비공개 저장소 연동** — PAT 입력과 검증, JSON 읽기·쓰기, 최소 저장소 권한
@@ -84,7 +84,7 @@ Vite가 출력한 주소에서 `/workout-tracker/` 경로를 엽니다. 서비�
 
 [공식 운동 카탈로그](data/exercise-catalog.json)는 고정 종목 키와 기본 휴식 시간을 제공합니다. 기존 기록의 포괄적인 종목 키는 **이전 종목 코드 확인**에서 구체적인 변형을 선택할 때까지 유지됩니다. 사용자 종목과 휴식 설정은 IndexedDB에 보존됩니다.
 
-빌드 기본 경로는 GitHub Pages용 `/workout-tracker/`입니다. 실제 Pages 배포는 4단계에서 진행합니다.
+빌드 기본 경로는 GitHub Pages용 `/workout-tracker/`입니다. `main`에 푸시하면 GitHub Actions에서 검사와 배포를 실행합니다. [PAT 발급, 첫 연결, 충돌 해결, 배포 방법](docs/github-sync.md)
 
 ## 설계 원칙
 
