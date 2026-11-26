@@ -46,6 +46,13 @@ GitHub Pages ← built static assets from workout-tracker (PUBLIC)
 
 See [architecture](docs/architecture.md), [data model](docs/data-model.md), and [implementation roadmap](docs/roadmap.md).
 
+## Exercise code registry
+
+- [Versioned exercise catalog](data/exercise-catalog.json): 16 stable exercise IDs, Korean/English names, safe aliases, equipment, target muscles and measurement types. Existing 2026-11-26 workout-data keys are preserved.
+- [GPT workout recording protocol](docs/exercise-recording-protocol.md): instructions for matching conversation wording to an exercise code, preserving unknown or estimated values, and safely committing to the private data repository.
+- **Integration pending:** the Phase 1 React app currently still uses its preliminary hardcoded catalog in `src/model.ts`. Codex needs to integrate the JSON registry and update types for durations, unilateral sets and uncertain repetitions before the GitHub sync phase. These documents alone do not change UI behavior.
+
+
 ## Security and privacy
 
 - The public website **is not access restricted**. Without a valid PAT, visitors cannot read private workout-data content.
