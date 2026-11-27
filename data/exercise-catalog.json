@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": "1.0.2",
+  "catalogVersion": "1.0.3",
   "namespace": "workout-tracker",
   "description": "Stable app-owned exercise identifiers; not external standard IDs.",
   "exercises": [
@@ -373,6 +373,26 @@
       "defaultRestSeconds": 90,
       "modifiers": [],
       "externalIds": {}
+    },
+    {
+      "id": "lying-machine-leg-curl",
+      "nameKo": "라잉 레그컬",
+      "nameEn": "Lying Machine Leg Curl",
+      "aliases": [
+        "라잉 레그 컬",
+        "라잉 레그컬 머신",
+        "엎드려서 하는 레그컬"
+      ],
+      "primaryMuscles": [
+        "hamstrings"
+      ],
+      "equipment": "leg-curl-machine",
+      "measurementType": "weight-reps",
+      "defaultRestSeconds": 90,
+      "modifiers": [
+        "lying"
+      ],
+      "externalIds": {}
     }
   ],
   "ambiguousTerms": {
@@ -406,6 +426,10 @@
     ],
     "삼두 익스텐션": [
       "cable-overhead-triceps-extension"
+    ],
+    "레그컬": [
+      "machine-leg-curl",
+      "lying-machine-leg-curl"
     ]
   }
 }
