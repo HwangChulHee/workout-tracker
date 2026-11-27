@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": "1.0.1",
+  "catalogVersion": "1.0.2",
   "namespace": "workout-tracker",
   "description": "Stable app-owned exercise identifiers; not external standard IDs.",
   "exercises": [
@@ -321,6 +321,58 @@
       "defaultRestSeconds": 120,
       "modifiers": [],
       "externalIds": {}
+    },
+    {
+      "id": "smith-machine-calf-raise",
+      "nameKo": "스미스머신 카프레이즈",
+      "nameEn": "Smith Machine Calf Raise",
+      "aliases": [
+        "스미스 카프레이즈",
+        "스미스 머신 카프레이즈"
+      ],
+      "primaryMuscles": [
+        "calves"
+      ],
+      "equipment": "smith-machine",
+      "measurementType": "weight-reps",
+      "defaultRestSeconds": 90,
+      "modifiers": [],
+      "externalIds": {}
+    },
+    {
+      "id": "machine-leg-curl",
+      "nameKo": "레그컬",
+      "nameEn": "Machine Leg Curl",
+      "aliases": [
+        "레그 컬",
+        "레그컬 머신"
+      ],
+      "primaryMuscles": [
+        "hamstrings"
+      ],
+      "equipment": "leg-curl-machine",
+      "measurementType": "weight-reps",
+      "defaultRestSeconds": 90,
+      "modifiers": [],
+      "externalIds": {}
+    },
+    {
+      "id": "smith-machine-shoulder-press",
+      "nameKo": "스미스머신 숄더프레스",
+      "nameEn": "Smith Machine Shoulder Press",
+      "aliases": [
+        "스미스 숄더프레스",
+        "스미스 머신 숄더프레스"
+      ],
+      "primaryMuscles": [
+        "deltoids",
+        "triceps"
+      ],
+      "equipment": "smith-machine",
+      "measurementType": "weight-reps",
+      "defaultRestSeconds": 90,
+      "modifiers": [],
+      "externalIds": {}
     }
   ],
   "ambiguousTerms": {
@@ -338,7 +390,8 @@
     ],
     "숄더프레스": [
       "machine-shoulder-press",
-      "barbell-overhead-press"
+      "barbell-overhead-press",
+      "smith-machine-shoulder-press"
     ],
     "풀업": [
       "bodyweight-pull-up",
